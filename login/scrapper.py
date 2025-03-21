@@ -40,4 +40,8 @@ def extract_token(username: str, password: str, url: str):
 
     token = localStorage["token"]
     if token:
+        try:
+            driver.quit()
+        except OSError:
+            pass
         return token

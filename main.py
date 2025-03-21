@@ -15,6 +15,7 @@ def main():
     date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
     faxurl = f"{os.getenv("URL_REQUEST")}?recipient=&sender=&start={date}&end={date}"
 
+    # Getting token and validating it
     try:
         token = extract_token(
                 username=os.getenv("USERNAME_ENV"),
@@ -43,23 +44,27 @@ def main():
     start_time = time.perf_counter()
 
     # Get json file with faxes and their ids
-    dump_json(
-        url=faxurl,
-        token=token,
-        location=os.getenv("LOCATION_ID"),
-        path=today_location,
-        date=date
-    )
+    # dump_json(
+    #     url=faxurl,
+    #     token=token,
+    #     location=os.getenv("LOCATION_ID"),
+    #     path=today_location,
+    #     date=date
+    # )
 
-    # text_extracting(date=date)
+    # text_extracting(
+    #     url=os.getenv("URL_REQUEST"),
+    #     token=token,
+    #     location=os.getenv("LOCATION_ID"),
+    #     path=today_location,
+    #     date=date
+    # )
 
     end_time = time.perf_counter()
-
     execution_time = end_time - start_time
-
     print (f"Program ran in {execution_time/60} minutes")
 
 
 
-# ========== Calling the main function
+# ========== Calling the main function ============
 main()

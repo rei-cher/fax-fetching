@@ -1,13 +1,9 @@
 import json, requests, os, pytesseract, time
 from pdf2image import convert_from_path
-from dotenv import load_dotenv
 
-# TODO: Move path to env
-load_dotenv()
-path = "C:\\Users\\OFFICE\\Documents\\dump"
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Users\\OFFICE\\AppData\\Local\\Programs\\Tesseract-OCR\\tesseract.exe'
 
-def save_text(text, id):
+def save_text(path, text, id):
     with open(f"{path}\\text_dump\\txt-{id}.txt", "w+") as textfile:
         textfile.write(text)
 
@@ -24,7 +20,7 @@ def extract_text(path, id):
         print(f"Error trying extracting text for {id}")
         pass
 
-def fetch_and_save(date):
+def fetch_and_save(url, token, location, path, date):
     done = 0
     failed = 0
     with open (f"{path}\\dump-{date}.json", 'r') as file:
@@ -33,28 +29,45 @@ def fetch_and_save(date):
         for i, item in enumerate(data["data"]):
             if (i % 20 == 0):
                 time.sleep(10)
-            print(f"Doing request for {item.get("ID")}")
-            response = requests.get(f"https://api.weaveconnect.com/portal/v1/fax/{item.get("ID")}", headers={
+            response = requests.get(f"{url}/{item.get("ID")}", headers={
                 "content-type": "application/pdf",
-                'Authorization' : f'Bearer {os.getenv("AUTHORIZATION")}',
-                'Location-id': os.getenv("LOCATION_ID"),
+                'Authorization' : f'Bearer {token}',
+                'Location-id': location,
             })
             if (response.status_code != 200):
                 print(f"Error with {item.get("ID")}, status code: {response.status_code}")
                 failed+=1
             else:
+                if (not os.path.exists(f"{path}\\pdf_dump")):
+                    os.mkdir(f"{path}\\pdf_dump")
                 temp = f"{path}\\pdf_dump\\pdf-{item.get("ID")}.pdf"
                 with open(temp, 'wb') as pdf:
                     pdf.write(response.content)
-                save_text(extract_text(temp, id=item.get("ID")), item.get("ID"))
+                save_text(
+                    path=path, 
+                    text = extract_text(path=temp, id=item.get("ID")), 
+                    id = item.get("ID")
+                )
                 done+=1
             
-                os.remove(temp)
+                # os.remove(temp)
         print(f"Completed {done}/{total}\nFailed {failed}/{total}")
 
-def text_extracting(date):
+def text_extracting(url, token, location, path, date):
     if (os.path.isdir(f"{path}\\text_dump")):
-        fetch_and_save(date=date)
+        fetch_and_save(
+            url=url,
+            token=token,
+            location=location,
+            path=path,
+            date=date
+        )
     else:
         os.mkdir(os.path.join(path, "text_dump"))
-        fetch_and_save(date=date)
+        fetch_and_save(
+            url=url,
+            token=token,
+            location=location,
+            path=path,
+            date=date
+        )
