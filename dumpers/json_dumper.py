@@ -1,14 +1,10 @@
 import requests, json, os
-from dotenv import load_dotenv
-
-# load env
-load_dotenv()
 
 # TODO: move path to env
 
-def dump_json(date):
+def dump_json(url, token, location, path, date):
     # file path for saving extracted faxes
-    filepath = f"C:\\Users\\OFFICE\\Documents\\dump\\dump-{date}.json"
+    filepath = f"{path}\\dump-{date}.json"
     # print(date)
     # print(os.path.isdir(filepath))
 
@@ -17,9 +13,9 @@ def dump_json(date):
     else:
     # getting and saving faxes info into json 
         try:
-            response = requests.get(f"{os.getenv('URL_REQUEST')}?recipient=&sender=&start={date}&end={date}", headers={
-                'Authorization' : f'Bearer {os.getenv("AUTHORIZATION")}',
-                'Location-id': os.getenv("LOCATION_ID"),
+            response = requests.get(url, headers={
+                'Authorization' : f'Bearer {token}',
+                'Location-id': location,
             })
 
             if (response.ok):

@@ -1,23 +1,65 @@
 from datetime import datetime, timedelta
 from dumpers.text_dumper import text_extracting
 from dumpers.json_dumper import dump_json
-import time
+from login.scrapper import extract_token
+from login.tokenValidator import validate_token
+from dotenv import load_dotenv
+import time, os
 
-# TODO: refresh and assign token using local storage
-# For that use selenium (login/scrapper)
+# ========== Globla load env =============
+# will be used to pass env variables as a parameters into functions
+load_dotenv()
 
-# TODO: before fetching faxes, validate the authorization (look for code 401)
+def main():
+    # Local variables
+    date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
+    faxurl = f"{os.getenv("URL_REQUEST")}?recipient=&sender=&start={date}&end={date}"
 
-# yesterday date format mm-dd-yyyy
-date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
+    try:
+        token = extract_token(
+                username=os.getenv("USERNAME_ENV"),
+                password=os.getenv("PASSWORD_ENV"),
+                url=os.getenv("URL_LOGIN")
+            )
+        
+        # print("\n\n", token, "\n\n")
+        if (token):
+            status = validate_token(
+                    url=faxurl,
+                    token=token,
+                    location=os.getenv("LOCATION_ID")
+                )
+            if (status != 200):
+                print(f"Token is not validated. Status code: {status}")
+                return 0
+    except Exception as e:
+        print(f"Error: {e}")
 
-start_time = time.perf_counter()
+    # make folder for the dedicated date
+    today_location = f"{os.getenv("DUMP_LOCATION")}\\{date}"
+    if(not os.path.exists(today_location)):
+        os.mkdir(today_location)
 
-dump_json(date=date)
-# text_extracting(date=date)
+    start_time = time.perf_counter()
 
-end_time = time.perf_counter()
+    # Get json file with faxes and their ids
+    dump_json(
+        url=faxurl,
+        token=token,
+        location=os.getenv("LOCATION_ID"),
+        path=today_location,
+        date=date
+    )
 
-execution_time = end_time - start_time
+    # text_extracting(date=date)
 
-print (f"Program ran in {execution_time/60} minutes")
+    end_time = time.perf_counter()
+
+    execution_time = end_time - start_time
+
+    print (f"Program ran in {execution_time/60} minutes")
+
+
+
+# ========== Calling the main function
+main()
