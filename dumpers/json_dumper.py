@@ -1,7 +1,5 @@
 import requests, json, os
 
-# TODO: move path to env
-
 def dump_json(url, token, location, path, date):
     # file path for saving extracted faxes
     filepath = f"{path}\\dump-{date}.json"

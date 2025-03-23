@@ -44,25 +44,26 @@ def main():
     start_time = time.perf_counter()
 
     # Get json file with faxes and their ids
-    # dump_json(
-    #     url=faxurl,
-    #     token=token,
-    #     location=os.getenv("LOCATION_ID"),
-    #     path=today_location,
-    #     date=date
-    # )
+    dump_json(
+        url=faxurl,
+        token=token,
+        location=os.getenv("LOCATION_ID"),
+        path=today_location,
+        date=date
+    )
 
-    # text_extracting(
-    #     url=os.getenv("URL_REQUEST"),
-    #     token=token,
-    #     location=os.getenv("LOCATION_ID"),
-    #     path=today_location,
-    #     date=date
-    # )
+    text_extracting(
+        url=os.getenv("URL_REQUEST"),
+        token=token,
+        location=os.getenv("LOCATION_ID"),
+        path=today_location,
+        date=date,
+        poppler_path=os.getenv("POPPLER_LOCATION")
+    )
 
     end_time = time.perf_counter()
     execution_time = end_time - start_time
-    print (f"Program ran in {execution_time/60} minutes")
+    print (f"Program ran in {execution_time/60:.2f} minutes")
 
 
 

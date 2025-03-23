@@ -7,7 +7,7 @@ def extract_token(username: str, password: str, url: str):
     # ======= setting up driver ==========
     options = uc.ChromeOptions()
     # user agent and additional arguents to bypass bot detection
-    options.add_argument("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 OPR/117.0.0.0")
+    options.add_argument("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -38,6 +38,10 @@ def extract_token(username: str, password: str, url: str):
         """
     )
 
+    # === in case location id won't work that is in .env
+    # === then uncomment the line below to extrtact location id from the local storage after login in
+    # location_id = localStorage["locationId"] # Location ID
+
     token = localStorage["token"]
     if token:
         try:
@@ -45,3 +49,6 @@ def extract_token(username: str, password: str, url: str):
         except OSError:
             pass
         return token
+    else:
+        driver.quit()
+        raise Exception("Token not found in localStorage.")
