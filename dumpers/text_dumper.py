@@ -1,10 +1,14 @@
-import json, requests, os, pytesseract, time
+import json, requests, os, pytesseract, time, re, string, nltk
+from nltk.tokenize import word_tokenize
+from spellchecker import SpellChecker
 from pdf2image import convert_from_path
 from dotenv import load_dotenv
-from nlp.nlp_analysis import determine_letter_type, extract_patient, rename_and_move_pdf
+# from nlp.nlp_analysis import determine_letter_type, extract_patient, rename_and_move_pdf
 
 load_dotenv()
 pytesseract.pytesseract.tesseract_cmd = os.getenv("TESSERACT_CMD")
+
+# nltk.download('punkt_tab')
 
 def extract_text(pdf_path, poppler_path):
     """
@@ -19,8 +23,37 @@ def extract_text(pdf_path, poppler_path):
             text+=pytesseract.image_to_string(image) + "\n"
         return text
     except Exception as e:
-        print(f"Error extracting text from {pdf_path}")
+        print(f"Error extracting text from {pdf_path}: {e}")
         return ""
+    
+def preprocess_text(text: str):
+    """
+    Clean up the text to remove:
+        1. urls
+        2. html tags
+        3. punctuation
+        4. extra spaces
+    """
+
+    spell = SpellChecker()
+
+    text = text.lower() # convert to lewercase
+    text = re.sub(r"http\s +", "" , text)
+    text = re.sub(r"<.*?>", "", text)
+    text = text.translate(str.maketrans("", "", string.punctuation))
+    text = re.sub(r'\W', ' ', text)
+    text = text.replace("\n", " ")
+    text = " ".join(text.split())
+
+    tokenized_words = word_tokenize(text)
+
+    corrected = [spell.correction(word) for word in tokenized_words]
+    
+    return corrected
+
+sometext = "This is a tewt wtih erors"
+print(preprocess_text(sometext))
+
 
 def fetch_and_analyze(url, token, location, path, date, poppler_path):
     done = 0
@@ -31,7 +64,7 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
         data = json.load(file)
         total = len(data["data"])
 
-        for i, item in enumerate(data["data"]):
+        for i, item in enumerate(data["data"][:5]):
 
             """
             There is an issue with rapid pdf download requests
@@ -68,21 +101,29 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
             with open(temp_pdf_path, 'wb') as pdf_file:
                 pdf_file.write(response.content)
 
-            # Extract text from pdf (in memory)
-            text = extract_text(temp_pdf_path, poppler_path=poppler_path)
+            if os.path.exists(temp_pdf_path):
+                # Extract text from pdf (in memory)
+                text = extract_text(temp_pdf_path, poppler_path=poppler_path)
+                with open(os.path.join(pdf_dump_dir, f"text-{pdf_id}.txt"), 'w') as text_file:
+                    text_file.write(text)
 
-            # Analyze text: type and patient info
-            letter_type = determine_letter_type(text)
-            patient_info = extract_patient(text)
+                textp = preprocess_text(text)
+                with open(os.path.join(pdf_dump_dir, f"textp-{pdf_id}.txt"), 'w') as text_file:
+                    text_file.write(textp)
+                
+                # Analyze text: type and patient info
+                letter_type = determine_letter_type(text)
+                patient_info = extract_patient(text)
 
-            # Rename and more pdf to corresponding folder
-            rename_and_move_pdf(
-                pdf_path=temp_pdf_path,
-                letter_type=letter_type,
-                patient_info=patient_info,
-                base_path=path
-            )
-
+                # Rename and more pdf to corresponding folder
+                rename_and_move_pdf(
+                    pdf_path=temp_pdf_path,
+                    letter_type=letter_type,
+                    patient_info=patient_info,
+                    base_path=path
+                )
+            else:
+                print(f"{temp_pdf_path} does not exist")
             done += 1
 
         # os.remove(pdf_dump_dir)

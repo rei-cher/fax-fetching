@@ -1,10 +1,12 @@
-import re, os, shutil
+import re, os, shutil, string
 
 approval_patterns = [
     r"\byour request has been approved\b",
     r"\bcoverage is approved\b",
     r"\bthe prior authorization is approved\b",
     r"\bwe have approved\b",
+    r"\bdrug has been approved\b",
+    r"\bhas been approved\b",
 ]
 
 fake_aproval_patterns = [
@@ -18,6 +20,11 @@ denial_patterns = [
     r"\byour request has been denied\b",
     r"\bthe prior authorization is denied\b",
     r"\bwe have denied\b",
+]
+
+patinet_name_patterns = [
+    r"Dear\s*:\s*(.+)",
+    r"Patient Name\s*:\s*(.+)"
 ]
 
 def determine_letter_type(text: str):
@@ -40,10 +47,10 @@ def determine_letter_type(text: str):
     for pattern in approval_patterns:
         if re.search(pattern, text_lower):
             # check if there are 'fake' for patterns
-            for fake_pattern in fake_aproval_patterns:
-                if re.search(fake_pattern, text_lower):
-                    return "unknown"
-                return "approval"
+            # for fake_pattern in fake_aproval_patterns:
+            #     if re.search(fake_pattern, text_lower):
+            #         return "unknown"
+            return "approval"
             
     # check for denial patterns
     for pattern in denial_patterns:
@@ -72,9 +79,9 @@ def extract_patient(text: str):
     """
 
     # TODO: analyze results to adjust regex 
-
     name_match = re.search(r'Patient Name\s*:\s*(.+)', text, re.IGNORECASE)
     dob_match = re.search(r'DOB\s*:\s*([\d\/\-\.\s]+)', text, re.IGNORECASE)
+
     medication_match = re.search(r'Medication\s*:\s*(.+)', text, re.IGNORECASE)
     
     info = {
