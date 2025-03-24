@@ -1,8 +1,24 @@
 import re, os, shutil
 
-approval_keywords = ["approved", "authorization granted", "covered"]
-denial_keywords = ["denied", "not covered", "authorization not approved", "rejected", "not covered"]
-patient_name = []
+approval_patterns = [
+    r"\byour request has been approved\b",
+    r"\bcoverage is approved\b",
+    r"\bthe prior authorization is approved\b",
+    r"\bwe have approved\b",
+]
+
+fake_aproval_patterns = [
+    r"\brequest for approval\b",
+    r"\bpending approval\b",
+    r"\bsubmit for approval\b",
+    r"\bcomplete a pa for approval\b",
+]
+
+denial_patterns = [
+    r"\byour request has been denied\b",
+    r"\bthe prior authorization is denied\b",
+    r"\bwe have denied\b",
+]
 
 def determine_letter_type(text: str):
     """
@@ -19,12 +35,22 @@ def determine_letter_type(text: str):
     """
 
     text_lower = text.lower() # all text to lowercase
-    for word in approval_keywords:
-        if word.lower() in text_lower:
-            return "approval"
-    for word in denial_keywords:
-        if word.lower() in text_lower:
+
+    # check for approval patterns
+    for pattern in approval_patterns:
+        if re.search(pattern, text_lower):
+            # check if there are 'fake' for patterns
+            for fake_pattern in fake_aproval_patterns:
+                if re.search(fake_pattern, text_lower):
+                    return "unknown"
+                return "approval"
+            
+    # check for denial patterns
+    for pattern in denial_patterns:
+        if re.search(pattern, text_lower):
             return "denial"
+        
+    # default 'unknown'
     return "unknown"
 
 def extract_patient(text: str):

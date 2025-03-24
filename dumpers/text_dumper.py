@@ -85,7 +85,7 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
 
             done += 1
 
-        os.remove(pdf_dump_dir)
+        # os.remove(pdf_dump_dir)
         print(f"Completed {done}/{total}\nFailed {failed}/{total}")
 
 def text_extracting(url, token, location, path, date, poppler_path):

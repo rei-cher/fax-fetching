@@ -12,8 +12,8 @@ load_dotenv()
 
 def main():
     # Local variables
-    # date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
-    date = "03-20-2025"
+    date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
+    # date = "03-21-2025"
     faxurl = f"{os.getenv("URL_REQUEST")}?recipient=&sender=&start={date}&end={date}"
 
     # Getting token and validating it
