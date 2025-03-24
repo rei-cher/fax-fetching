@@ -12,7 +12,8 @@ load_dotenv()
 
 def main():
     # Local variables
-    date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
+    # date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
+    date = "03-20-2025"
     faxurl = f"{os.getenv("URL_REQUEST")}?recipient=&sender=&start={date}&end={date}"
 
     # Getting token and validating it
@@ -37,9 +38,9 @@ def main():
         print(f"Error: {e}")
 
     # make folder for the dedicated date
-    today_location = f"{os.getenv("DUMP_LOCATION")}\\{date}"
-    if(not os.path.exists(today_location)):
-        os.mkdir(today_location)
+    date_location = f"{os.getenv("DUMP_LOCATION")}\\{date}"
+    if(not os.path.exists(date_location)):
+        os.mkdir(date_location)
 
     start_time = time.perf_counter()
 
@@ -48,7 +49,7 @@ def main():
         url=faxurl,
         token=token,
         location=os.getenv("LOCATION_ID"),
-        path=today_location,
+        path=date_location,
         date=date
     )
 
@@ -56,7 +57,7 @@ def main():
         url=os.getenv("URL_REQUEST"),
         token=token,
         location=os.getenv("LOCATION_ID"),
-        path=today_location,
+        path=date_location,
         date=date,
         poppler_path=os.getenv("POPPLER_LOCATION")
     )

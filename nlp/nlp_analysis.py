@@ -1,5 +1,9 @@
 import re, os, shutil
 
+approval_keywords = ["approved", "authorization granted", "covered"]
+denial_keywords = ["denied", "not covered", "authorization not approved", "rejected", "not covered"]
+patient_name = []
+
 def determine_letter_type(text: str):
     """
     Determine if the extracted text is from an approval or denial letter
@@ -15,10 +19,12 @@ def determine_letter_type(text: str):
     """
 
     text_lower = text.lower() # all text to lowercase
-    if "approved" in text_lower or "approval" in text_lower:
-        return "approval"
-    if "denied" in text_lower or "denial" in text_lower:
-        return "denial"
+    for word in approval_keywords:
+        if word.lower() in text_lower:
+            return "approval"
+    for word in denial_keywords:
+        if word.lower() in text_lower:
+            return "denial"
     return "unknown"
 
 def extract_patient(text: str):
