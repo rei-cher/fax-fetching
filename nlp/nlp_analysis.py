@@ -22,6 +22,15 @@ denial_patterns = [
     r"\bwe have denied\b",
 ]
 
+# name_patterns = [
+#     r"dear\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'dear'
+#     r"patient(?:\s*name)?\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'patient'
+#     r"last\s*name\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'last name'
+#     r"member\s*name\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'last name'
+#     r"member\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'last name'
+#     r"name\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'last name'
+# ]
+
 def determine_letter_type(text: str):
     """
     Determine if the extracted text is from an approval or denial letter
@@ -74,13 +83,20 @@ def extract_patient(text: str):
     """
 
     # TODO: analyze results to adjust regex 
-    name_match = re.search(r'(dear | member)\s+([A-Z][a-z]+)\s+([A-Z][a-z]+)', text, re.IGNORECASE)
+    name_match = re.search(r'(Dear | Member)\s+([A-Z][a-z]+)\s+([A-Z][a-z]+)', text)
+    # name = "Unknown"
+    # for pattern in name_patterns:
+    #     match = re.search(pattern, text, re.IGNORECASE)
+    #     if match:
+    #         name = match.group(1).strip()
+    #         break
     dob_match = re.search(r'\bDOB\b\s*:\s*([\d\/\-\.\s]+)', text, re.IGNORECASE)
 
     medication_match = re.search(r'\bMedication\b\s*:\s*(.+)', text, re.IGNORECASE)
     
     info = {
         "name": name_match.group(1).strip() if name_match else "Unknown",
+        # "name": name,
         "dob": dob_match.group(1).strip() if dob_match else "Unknown",
         "medication": medication_match.group(1).strip() if medication_match else "Unknown"
     }

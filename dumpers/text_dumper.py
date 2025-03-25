@@ -70,7 +70,7 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
         data = json.load(file)
         total = len(data["data"])
 
-        for i, item in enumerate(data["data"]):
+        for i, item in enumerate(data["data"][:5]):
 
             """
             There is an issue with rapid pdf download requests
@@ -110,24 +110,25 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
 
             if os.path.exists(temp_pdf_path):
                 # Extract text from pdf (in memory)
-                text = preprocess_text(extract_text(temp_pdf_path, poppler_path=poppler_path))
-                print(f"\nText for pdf #: {item.get('ID')}\n{text}\n")
+                raw_text = extract_text(temp_pdf_path, poppler_path=poppler_path)
+                processed_text = preprocess_text(raw_text)
+                # print(f"\nText for pdf #: {item.get('ID')}\n{processed_text}\n")
 
                 # Analyze text: type and patient info
-                letter_type = determine_letter_type(text)
+                letter_type = determine_letter_type(processed_text)
                 print(f"\nLetter type of #: {item.get('ID')} - {letter_type}\n")
 
-                patient_info = extract_patient(text)
+                patient_info = extract_patient(raw_text)
                 print(f"\nPatient name: {patient_info}\n")
 
                 # Rename and more pdf to corresponding folder
-                rename_and_move_pdf(
-                    pdf_path=temp_pdf_path,
-                    letter_type=letter_type,
-                    patient_info=patient_info,
-                    base_path=path,
-                    id=item.get('ID')
-                )
+                # rename_and_move_pdf(
+                #     pdf_path=temp_pdf_path,
+                #     letter_type=letter_type,
+                #     patient_info=patient_info,
+                #     base_path=path,
+                #     id=item.get('ID')
+                # )
             else:
                 print(f"{temp_pdf_path} does not exist")
             done += 1
