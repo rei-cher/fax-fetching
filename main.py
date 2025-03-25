@@ -12,30 +12,30 @@ load_dotenv()
 
 def main():
     # Local variables
-    # date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
-    date = "03-17-2025"
+    date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
+    # date = "03-17-2025"
     faxurl = f"{os.getenv("URL_REQUEST")}?recipient=&sender=&start={date}&end={date}"
 
     # Getting token and validating it
-    # try:
-    #     token = extract_token(
-    #             username=os.getenv("USERNAME_ENV"),
-    #             password=os.getenv("PASSWORD_ENV"),
-    #             url=os.getenv("URL_LOGIN")
-    #         )
+    try:
+        token = extract_token(
+                username=os.getenv("USERNAME_ENV"),
+                password=os.getenv("PASSWORD_ENV"),
+                url=os.getenv("URL_LOGIN")
+            )
         
-    #     # print("\n\n", token, "\n\n")
-    #     if (token):
-    #         status = validate_token(
-    #                 url=faxurl,
-    #                 token=token,
-    #                 location=os.getenv("LOCATION_ID")
-    #             )
-    #         if (status != 200):
-    #             print(f"Token is not validated. Status code: {status}")
-    #             return 0
-    # except Exception as e:
-    #     print(f"Error: {e}")
+        # print("\n\n", token, "\n\n")
+        if (token):
+            status = validate_token(
+                    url=faxurl,
+                    token=token,
+                    location=os.getenv("LOCATION_ID")
+                )
+            if (status != 200):
+                print(f"Token is not validated. Status code: {status}")
+                return 0
+    except Exception as e:
+        print(f"Error: {e}")
 
 
     # make folder for the dedicated date

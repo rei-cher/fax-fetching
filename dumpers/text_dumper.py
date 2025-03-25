@@ -1,14 +1,24 @@
-import json, requests, os, pytesseract, time, re, string, nltk
+import json, requests, os, pytesseract, time, re, string, nltk, cv2
+import numpy as np
+from PIL import Image
 from nltk.tokenize import word_tokenize
 from spellchecker import SpellChecker
 from pdf2image import convert_from_path
 from dotenv import load_dotenv
-# from nlp.nlp_analysis import determine_letter_type, extract_patient, rename_and_move_pdf
+from nlp.nlp_analysis import determine_letter_type, extract_patient, rename_and_move_pdf
 
 load_dotenv()
 pytesseract.pytesseract.tesseract_cmd = os.getenv("TESSERACT_CMD")
+nltk.download('punkt_tab')
+nltk.download('words')
 
-# nltk.download('punkt_tab')
+
+def preprocess_image(pil_image):
+    # convert pil image to opencv
+    image = np.array(pil_image.convert("L"))
+    _, processed = cv2.threshold(image, 150, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    return Image.fromarray(processed)
 
 def extract_text(pdf_path, poppler_path):
     """
@@ -20,7 +30,8 @@ def extract_text(pdf_path, poppler_path):
         images = convert_from_path(pdf_path, poppler_path=poppler_path)
         text=""
         for image in images:
-            text+=pytesseract.image_to_string(image) + "\n"
+            clean_image = preprocess_image(image)
+            text+=pytesseract.image_to_string(clean_image) + "\n"
         return text
     except Exception as e:
         print(f"Error extracting text from {pdf_path}: {e}")
@@ -40,19 +51,14 @@ def preprocess_text(text: str):
     text = text.lower() # convert to lewercase
     text = re.sub(r"http\s +", "" , text)
     text = re.sub(r"<.*?>", "", text)
-    text = text.translate(str.maketrans("", "", string.punctuation))
-    text = re.sub(r'\W', ' ', text)
-    text = text.replace("\n", " ")
-    text = " ".join(text.split())
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    text = re.sub(r"\s+", " ", text)
 
-    tokenized_words = word_tokenize(text)
-
-    corrected = [spell.correction(word) for word in tokenized_words]
+    tokenized = word_tokenize(text)
+    corrected = [spell.correction(word) if word not in spell and word not in nltk.corpus.words.words() 
+                 else word for word in tokenized]
     
-    return corrected
-
-sometext = "This is a tewt wtih erors"
-print(preprocess_text(sometext))
+    return " ".join(corrected)
 
 
 def fetch_and_analyze(url, token, location, path, date, poppler_path):
@@ -64,7 +70,7 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
         data = json.load(file)
         total = len(data["data"])
 
-        for i, item in enumerate(data["data"][:5]):
+        for i, item in enumerate(data["data"]):
 
             """
             There is an issue with rapid pdf download requests
@@ -75,6 +81,7 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
             if (i % 20 == 0) and (i != 0):
                 time.sleep(10)
 
+            print(f"Doing pdf #: {item.get('ID')}\n{i+1}\\{total}")
             pdf_id = item.get("ID")
             pdf_url = f"{url}/{pdf_id}"
 
@@ -103,24 +110,23 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
 
             if os.path.exists(temp_pdf_path):
                 # Extract text from pdf (in memory)
-                text = extract_text(temp_pdf_path, poppler_path=poppler_path)
-                with open(os.path.join(pdf_dump_dir, f"text-{pdf_id}.txt"), 'w') as text_file:
-                    text_file.write(text)
+                text = preprocess_text(extract_text(temp_pdf_path, poppler_path=poppler_path))
+                print(f"\nText for pdf #: {item.get('ID')}\n{text}\n")
 
-                textp = preprocess_text(text)
-                with open(os.path.join(pdf_dump_dir, f"textp-{pdf_id}.txt"), 'w') as text_file:
-                    text_file.write(textp)
-                
                 # Analyze text: type and patient info
                 letter_type = determine_letter_type(text)
+                print(f"\nLetter type of #: {item.get('ID')} - {letter_type}\n")
+
                 patient_info = extract_patient(text)
+                print(f"\nPatient name: {patient_info}\n")
 
                 # Rename and more pdf to corresponding folder
                 rename_and_move_pdf(
                     pdf_path=temp_pdf_path,
                     letter_type=letter_type,
                     patient_info=patient_info,
-                    base_path=path
+                    base_path=path,
+                    id=item.get('ID')
                 )
             else:
                 print(f"{temp_pdf_path} does not exist")

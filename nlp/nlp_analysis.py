@@ -22,11 +22,6 @@ denial_patterns = [
     r"\bwe have denied\b",
 ]
 
-patinet_name_patterns = [
-    r"Dear\s*:\s*(.+)",
-    r"Patient Name\s*:\s*(.+)"
-]
-
 def determine_letter_type(text: str):
     """
     Determine if the extracted text is from an approval or denial letter
@@ -79,10 +74,10 @@ def extract_patient(text: str):
     """
 
     # TODO: analyze results to adjust regex 
-    name_match = re.search(r'Patient Name\s*:\s*(.+)', text, re.IGNORECASE)
-    dob_match = re.search(r'DOB\s*:\s*([\d\/\-\.\s]+)', text, re.IGNORECASE)
+    name_match = re.search(r'(dear | member)\s+([A-Z][a-z]+)\s+([A-Z][a-z]+)', text, re.IGNORECASE)
+    dob_match = re.search(r'\bDOB\b\s*:\s*([\d\/\-\.\s]+)', text, re.IGNORECASE)
 
-    medication_match = re.search(r'Medication\s*:\s*(.+)', text, re.IGNORECASE)
+    medication_match = re.search(r'\bMedication\b\s*:\s*(.+)', text, re.IGNORECASE)
     
     info = {
         "name": name_match.group(1).strip() if name_match else "Unknown",
@@ -92,7 +87,7 @@ def extract_patient(text: str):
     
     return info
 
-def rename_and_move_pdf(pdf_path: str, letter_type: str, patient_info: dict, base_path: str) -> str:
+def rename_and_move_pdf(pdf_path: str, letter_type: str, patient_info: dict, base_path: str, id) -> str:
     """
     Renames the pdf based on letter type, patient name, dob, and medication
     Then moves it to the appropriate folder ('approvals', 'denials', or 'unknown')
@@ -119,7 +114,7 @@ def rename_and_move_pdf(pdf_path: str, letter_type: str, patient_info: dict, bas
     os.makedirs(folder, exist_ok=True)
 
     # Create new filename
-    new_filename = f"{letter_type.capitalize()}_{cleaned_name}_{cleaned_dob}_{cleaned_med}.pdf"
+    new_filename = f"{letter_type.capitalize()}_{cleaned_name}_{cleaned_dob}_{cleaned_med}_{id}.pdf"
     new_pdf_path = os.path.join(folder, new_filename)
 
     # Move/rename the file
