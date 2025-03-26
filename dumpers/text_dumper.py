@@ -6,6 +6,7 @@ from spellchecker import SpellChecker
 from pdf2image import convert_from_path
 from dotenv import load_dotenv
 from nlp.nlp_analysis import determine_letter_type, extract_patient, rename_and_move_pdf
+from nlp.name_extraction import extract_names
 
 load_dotenv()
 pytesseract.pytesseract.tesseract_cmd = os.getenv("TESSERACT_CMD")
@@ -70,7 +71,7 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
         data = json.load(file)
         total = len(data["data"])
 
-        for i, item in enumerate(data["data"][:5]):
+        for i, item in enumerate(data["data"]):
 
             """
             There is an issue with rapid pdf download requests
@@ -78,21 +79,31 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
             To avoid - throttling requests (found every 20 is a good spot)
             For future, sleep time may be adjust for better performance (not tested the best time)
             """
-            if (i % 20 == 0) and (i != 0):
-                time.sleep(10)
 
             print(f"Doing pdf #: {item.get('ID')}\n{i+1}\\{total}")
             pdf_id = item.get("ID")
             pdf_url = f"{url}/{pdf_id}"
 
-            response = requests.get(
-                pdf_url, 
-                headers={
-                    "content-type": "application/pdf",
-                    'Authorization' : f'Bearer {token}',
-                    'Location-id': location,
-                }
-            )
+            try:
+                response = requests.get(
+                    pdf_url, 
+                    headers={
+                        "content-type": "application/pdf",
+                        'Authorization' : f'Bearer {token}',
+                        'Location-id': location,
+                    }
+                )
+            except requests.exceptions.ConnectionError:
+                print(f"Download of {item.get('ID')} failed due to exceed of requests\nWaiting 20 seconds, then retrying.")
+                time.sleep(20)
+                response = requests.get(
+                    pdf_url, 
+                    headers={
+                        "content-type": "application/pdf",
+                        'Authorization' : f'Bearer {token}',
+                        'Location-id': location,
+                    }
+                )
 
             if (response.status_code != 200):
                 print(f"Error with {item.get("ID")}, status code: {response.status_code}")
@@ -121,14 +132,17 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
                 patient_info = extract_patient(raw_text)
                 print(f"\nPatient name: {patient_info}\n")
 
+                names_in_file = extract_names(raw_text)
+                print(f"Names in file: {names_in_file}")
+
                 # Rename and more pdf to corresponding folder
-                # rename_and_move_pdf(
-                #     pdf_path=temp_pdf_path,
-                #     letter_type=letter_type,
-                #     patient_info=patient_info,
-                #     base_path=path,
-                #     id=item.get('ID')
-                # )
+                rename_and_move_pdf(
+                    pdf_path=temp_pdf_path,
+                    letter_type=letter_type,
+                    patient_info=patient_info,
+                    base_path=path,
+                    id=item.get('ID')
+                )
             else:
                 print(f"{temp_pdf_path} does not exist")
             done += 1

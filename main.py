@@ -13,7 +13,7 @@ load_dotenv()
 def main():
     # Local variables
     date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
-    # date = "03-17-2025"
+    # date = "03-24-2025"
     faxurl = f"{os.getenv("URL_REQUEST")}?recipient=&sender=&start={date}&end={date}"
 
     # Getting token and validating it
@@ -36,7 +36,6 @@ def main():
                 return 0
     except Exception as e:
         print(f"Error: {e}")
-
 
     # make folder for the dedicated date
     date_location = f"{os.getenv("DUMP_LOCATION")}\\{date}"

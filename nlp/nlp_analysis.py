@@ -7,19 +7,28 @@ approval_patterns = [
     r"\bwe have approved\b",
     r"\bdrug has been approved\b",
     r"\bhas been approved\b",
+    r"\brequest has been reviewed and approved\b",
 ]
 
-fake_aproval_patterns = [
+request_patterns = [
     r"\brequest for approval\b",
     r"\bpending approval\b",
     r"\bsubmit for approval\b",
+    r"\bsubmit the prior authorization\b",
     r"\bcomplete a pa for approval\b",
+    r"\bcomplete the pa\b",
+    r"\bcomplete a pa\b",
+    r"\bhas been rejected and requires prior authorization\b",
+    r"\brequires additional action to complete\b",
+    r"\bhas been started for you for\b",
 ]
 
 denial_patterns = [
     r"\byour request has been denied\b",
     r"\bthe prior authorization is denied\b",
     r"\bwe have denied\b",
+    r"\bwe have rejected\b",
+    r"\bnot covered\b",
 ]
 
 # name_patterns = [
@@ -50,11 +59,12 @@ def determine_letter_type(text: str):
     # check for approval patterns
     for pattern in approval_patterns:
         if re.search(pattern, text_lower):
-            # check if there are 'fake' for patterns
-            # for fake_pattern in fake_aproval_patterns:
-            #     if re.search(fake_pattern, text_lower):
-            #         return "unknown"
             return "approval"
+        
+    # check for the pa request
+    for pattern in request_patterns:
+        if re.search(pattern, text_lower):
+            return "request"
             
     # check for denial patterns
     for pattern in denial_patterns:
@@ -123,14 +133,19 @@ def rename_and_move_pdf(pdf_path: str, letter_type: str, patient_info: dict, bas
         folder = os.path.join(base_path, "approvals")
     elif letter_type == "denial":
         folder = os.path.join(base_path, "denials")
+    elif letter_type == "request":
+        folder = os.path.join(base_path, "request-pa")
     else:
-        folder = os.path.join(base_path, "unknown")
+        folder = os.path.join(base_path, "other")
 
     # Make sure folder exists
     os.makedirs(folder, exist_ok=True)
 
     # Create new filename
-    new_filename = f"{letter_type.capitalize()}_{cleaned_name}_{cleaned_dob}_{cleaned_med}_{id}.pdf"
+    if (letter_type == "other"):
+        new_filename = f"{letter_type.capitalize()}_FaxID_{id}.pdf"
+    else:
+        new_filename = f"{letter_type.capitalize()}_{cleaned_name}_{cleaned_dob}_{cleaned_med}_{id}.pdf"
     new_pdf_path = os.path.join(folder, new_filename)
 
     # Move/rename the file
