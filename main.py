@@ -38,7 +38,7 @@ def main():
         print(f"Error: {e}")
 
     # make folder for the dedicated date
-    date_location = f"{os.getenv("DUMP_LOCATION")}\\{date}"
+    date_location = f"{os.getenv("DUMP_LOCATION")}\\{date}-1"
     if(not os.path.exists(date_location)):
         os.mkdir(date_location)
 

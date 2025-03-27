@@ -6,7 +6,6 @@ from spellchecker import SpellChecker
 from pdf2image import convert_from_path
 from dotenv import load_dotenv
 from nlp.nlp_analysis import determine_letter_type, extract_patient, rename_and_move_pdf
-from nlp.name_extraction import extract_names
 
 load_dotenv()
 pytesseract.pytesseract.tesseract_cmd = os.getenv("TESSERACT_CMD")
@@ -131,9 +130,6 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
 
                 patient_info = extract_patient(raw_text)
                 print(f"\nPatient name: {patient_info}\n")
-
-                names_in_file = extract_names(raw_text)
-                print(f"Names in file: {names_in_file}")
 
                 # Rename and more pdf to corresponding folder
                 rename_and_move_pdf(

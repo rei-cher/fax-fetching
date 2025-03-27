@@ -21,6 +21,7 @@ request_patterns = [
     r"\bhas been rejected and requires prior authorization\b",
     r"\brequires additional action to complete\b",
     r"\bhas been started for you for\b",
+    r"\bhas been rejected and requires prior authorization\b",
 ]
 
 denial_patterns = [
@@ -93,7 +94,7 @@ def extract_patient(text: str):
     """
 
     # TODO: analyze results to adjust regex 
-    name_match = re.search(r'(Dear | Member)\s+([A-Z][a-z]+)\s+([A-Z][a-z]+)', text)
+    name_match = re.search(r'(Dear | Member)\s+([A-Z]+)\s+([A-Z]+)', text)
     # name = "Unknown"
     # for pattern in name_patterns:
     #     match = re.search(pattern, text, re.IGNORECASE)
@@ -107,7 +108,7 @@ def extract_patient(text: str):
     info = {
         "name": name_match.group(1).strip() if name_match else "Unknown",
         # "name": name,
-        "dob": dob_match.group(1).strip() if dob_match else "Unknown",
+        "dob": dob_match.group(1).strip().replace("/","-") if dob_match else "Unknown",
         "medication": medication_match.group(1).strip() if medication_match else "Unknown"
     }
     
