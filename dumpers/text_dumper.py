@@ -64,6 +64,9 @@ def preprocess_text(text: str):
 def fetch_and_analyze(url, token, location, path, date, poppler_path):
     done = 0
     failed = 0
+    pa_approvals = 0
+    pa_denials = 0
+    pa_requests = 0
 
     # read the json dump that contains the list of faxes
     with open (f"{path}\\dump-{date}.json", 'r') as file:
@@ -81,6 +84,8 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
 
             print(f"Doing pdf #: {item.get('ID')}\n{i+1}\\{total}")
             pdf_id = item.get("ID")
+            # pdf_id = "33aa15f6-76dd-43ad-9beb-ce61643103c4" __»*. Denying your request for Pimecrolimus 1% services effective 3/26/2025.
+            # pdf_id = "98ee7b52-0e4a-4c50-af07-1551eee595f6"
             pdf_url = f"{url}/{pdf_id}"
 
             try:
@@ -126,6 +131,14 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
 
                 # Analyze text: type and patient info
                 letter_type = determine_letter_type(processed_text)
+                match (letter_type):
+                    case "approval":
+                        pa_approvals +=1
+                    case "denial":
+                        pa_denials +=1
+                    case "request":
+                        pa_requests +=1
+
                 print(f"\nLetter type of #: {item.get('ID')} - {letter_type}\n")
 
                 patient_info = extract_patient(raw_text)
@@ -145,6 +158,7 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
 
         # os.remove(pdf_dump_dir)
         print(f"Completed {done}/{total}\nFailed {failed}/{total}")
+        print(f"Approvals: {pa_approvals}\nDenials: {pa_denials}\nRequests: {pa_requests}")
 
 def text_extracting(url, token, location, path, date, poppler_path):
     """

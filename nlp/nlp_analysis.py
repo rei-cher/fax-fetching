@@ -8,6 +8,12 @@ approval_patterns = [
     r"\bdrug has been approved\b",
     r"\bhas been approved\b",
     r"\brequest has been reviewed and approved\b",
+    r"\bthe request is approved for the following time period\b",
+    r"\bwe've approved your ot your doctor's request for coverage for\b",
+    r"\bprior authorization status approved\b",
+    r"\band approved the request as follows\b",
+    r"\band approved tha request as follows\b",
+    r"\bre we ve approved your request for coverage\b",
 ]
 
 request_patterns = [
@@ -21,7 +27,9 @@ request_patterns = [
     r"\bhas been rejected and requires prior authorization\b",
     r"\brequires additional action to complete\b",
     r"\bhas been started for you for\b",
-    r"\bhas been rejected and requires prior authorization\b",
+    r"\bhas pharmacy been rejected and requires prior authorization\b",
+    r"\ba prior authorization pa form has benn started for you for\b",
+    r"\bwe have automatically started this electronic prior authorization epa based on the expiration date of an existing prior authorization for the below patient and drug if your patient requires continued therapy you may follow the instructions below to submit the renewal epa online to request renewal of the current prior authorization\b",
 ]
 
 denial_patterns = [
@@ -30,6 +38,9 @@ denial_patterns = [
     r"\bwe have denied\b",
     r"\bwe have rejected\b",
     r"\bnot covered\b",
+    r"\bx denying your request for\b",
+    r"\bwe are not approving this medication because\b",
+    r"\bthis is the reason for the denial\b",
 ]
 
 # name_patterns = [
