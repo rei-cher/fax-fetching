@@ -1,5 +1,5 @@
 header.txt
 .env
-.venv
+.venv*
 
 debug/*
