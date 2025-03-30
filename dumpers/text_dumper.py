@@ -57,7 +57,7 @@ def preprocess_text(text: str):
     tokenized = word_tokenize(text)
     corrected = [spell.correction(word) if word not in spell and word not in nltk.corpus.words.words() 
                  else word for word in tokenized]
-    
+    corrected = [word if word is not None else tokenized[i] for i, word in enumerate(corrected)]
     return " ".join(corrected)
 
 
