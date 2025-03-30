@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
 from dumpers.text_dumper import text_extracting
 from dumpers.json_dumper import dump_json
-from login.scrapper import extract_token
-from login.tokenValidator import validate_token
+from login.login import get_token, validate_token
 from dotenv import load_dotenv
 import time, os
 
@@ -18,10 +17,9 @@ def main():
 
     # Getting token and validating it
     try:
-        token = extract_token(
+        token = get_token(
                 username=os.getenv("USERNAME_ENV"),
-                password=os.getenv("PASSWORD_ENV"),
-                url=os.getenv("URL_LOGIN")
+                password=os.getenv("PASSWORD_ENV")
             )
         
         # print("\n\n", token, "\n\n")
