@@ -7,7 +7,7 @@ import time, os
 
 # ========== Globla load env =============
 # will be used to pass env variables as a parameters into functions
-load_dotenv()
+load_dotenv(override=True)
 
 def main():
     # Local variables
@@ -57,7 +57,8 @@ def main():
         location=os.getenv("LOCATION_ID"),
         path=date_location,
         date=date,
-        poppler_path=os.getenv("POPPLER_LOCATION")
+        poppler_path=os.getenv("POPPLER_LOCATION"),
+        tesseract_path=os.getenv("TESSERACT_CMD")
     )
 
     end_time = time.perf_counter()
