@@ -34,6 +34,7 @@ request_patterns = [
 
 denial_patterns = [
     r"\byour request has been denied\b",
+    r"\byour request was denied for the following reason\b",
     r"\bthe prior authorization is denied\b",
     r"\bwe have denied\b",
     r"\bwe have rejected\b",
@@ -42,6 +43,13 @@ denial_patterns = [
     r"\bwe are not approving this medication because\b",
     r"\bthis is the reason for the denial\b",
 ]
+
+# dob_patter = [
+#     r"\bdob\b[:\s-]*([0-9]{1,2}{/\-}[0-9]{1,2}{/\-}[0-9]{4})",
+#     r"\bdob:\b[:\s-]*([0-9]{1,2}{/\-}[0-9]{1,2}{/\-}[0-9]{4})",
+#     r"\date of birth\b[:\s-]*([0-9]{1,2}{/\-}[0-9]{1,2}{/\-}[0-9]{4})",
+#     r"\date of birth:\b[:\s-]*([0-9]{1,2}{/\-}[0-9]{1,2}{/\-}[0-9]{4})",
+# ]
 
 # name_patterns = [
 #     r"dear\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'dear'
@@ -113,19 +121,21 @@ def extract_patient(text: str):
     #         name = match.group(1).strip()
     #         break
     dob_match = re.search(r'\bDOB\b\s*:\s*([\d\/\-\.\s]+)', text, re.IGNORECASE)
-
+    # dob_match = next((re.search(pattern, text, re.IGNORECASE) for pattern in dob_patter if re.search(pattern, text, re.IGNORECASE)), None)
+    # if dob_match:
+    #     print(dob_match.group(1))
     medication_match = re.search(r'\bMedication\b\s*:\s*(.+)', text, re.IGNORECASE)
     
     info = {
         "name": name_match.group(1).strip() if name_match else "Unknown",
         # "name": name,
-        "dob": dob_match.group(1).strip().replace("/","-") if dob_match else "Unknown",
+        "dob": dob_match.group(1).strip().replace('/', '-') if dob_match else "Unknown",
         "medication": medication_match.group(1).strip() if medication_match else "Unknown"
     }
     
     return info
 
-def rename_and_move_pdf(pdf_path: str, letter_type: str, patient_info: dict, base_path: str, id) -> str:
+def rename_and_move_pdf(pdf_path: str, letter_type: str, patient_info: dict, base_path: str, id, date: str) -> str:
     """
     Renames the pdf based on letter type, patient name, dob, and medication
     Then moves it to the appropriate folder ('approvals', 'denials', or 'unknown')
@@ -133,7 +143,7 @@ def rename_and_move_pdf(pdf_path: str, letter_type: str, patient_info: dict, bas
 
     # Helper to sanitize filenames
     def clean_str(s):
-        return re.sub(r'\W+', '_', s).strip('_')
+        return re.sub(r'\W+', '-', s).strip('-')
 
     # Clean up patient info for filename
     cleaned_name = clean_str(patient_info.get("name", "Unknown"))
@@ -147,18 +157,29 @@ def rename_and_move_pdf(pdf_path: str, letter_type: str, patient_info: dict, bas
         folder = os.path.join(base_path, "denials")
     elif letter_type == "request":
         folder = os.path.join(base_path, "request-pa")
+    # else:
+    #     folder = os.path.join(base_path, "other")
     else:
-        folder = os.path.join(base_path, "other")
+        folder = os.path.join("S:\\Folders\\FAXES", date)
 
     # Make sure folder exists
     os.makedirs(folder, exist_ok=True)
 
     # Create new filename
-    if (letter_type == "other"):
-        new_filename = f"{letter_type.capitalize()}_FaxID_{id}.pdf"
-    else:
+    if (letter_type == "approval" or letter_type == "denial" or letter_type == "request"):
         new_filename = f"{letter_type.capitalize()}_{cleaned_name}_{cleaned_dob}_{cleaned_med}_{id}.pdf"
-    new_pdf_path = os.path.join(folder, new_filename)
+        new_pdf_path = os.path.join(folder, new_filename)
+    else:
+        new_filename = f"FaxID_{id}.pdf"
+        new_pdf_path = os.path.join(folder, new_filename)
+
+    # if (letter_type != "other"):
+    #     new_filename = f"FaxID_{id}.pdf"
+    #     # new_filename = f"{id}.pdf"
+    #     new_pdf_path = os.path.join(folder, new_filename)
+    # else:
+    #     new_filename = f"FaxID_{id}.pdf"
+    #     new_pdf_path = os.path.join(folder, new_filename)
 
     # Move/rename the file
     shutil.move(pdf_path, new_pdf_path)

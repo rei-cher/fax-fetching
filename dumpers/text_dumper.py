@@ -27,11 +27,13 @@ def extract_text(pdf_path, poppler_path):
     Returns the extracted text as a single string
     """
     try:
-        images = convert_from_path(pdf_path, poppler_path=poppler_path)
+        images = convert_from_path(pdf_path, poppler_path=poppler_path, dpi=300)
         text=""
         for image in images:
             clean_image = preprocess_image(image)
             text+=pytesseract.image_to_string(clean_image) + "\n"
+        
+        print(text)
         return text
     except Exception as e:
         print(f"Error extracting text from {pdf_path}: {e}")
@@ -150,7 +152,8 @@ def fetch_and_analyze(url, token, location, path, date, poppler_path):
                     letter_type=letter_type,
                     patient_info=patient_info,
                     base_path=path,
-                    id=item.get('ID')
+                    id=item.get('ID'),
+                    date=date
                 )
             else:
                 print(f"{temp_pdf_path} does not exist")

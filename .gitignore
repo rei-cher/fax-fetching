@@ -2,4 +2,4 @@ header.txt
 .env
 .venv*
 
-debug/*
+debug/images/*

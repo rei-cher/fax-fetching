@@ -9,10 +9,10 @@ import time, os
 # will be used to pass env variables as a parameters into functions
 load_dotenv()
 
-def main():
+def main(date=None):
     # Local variables
     date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
-    # date = "03-24-2025"
+    # date = "04-17-2025"
     faxurl = f"{os.getenv("URL_REQUEST")}?recipient=&sender=&start={date}&end={date}"
 
     # Getting token and validating it
@@ -40,8 +40,6 @@ def main():
     if(not os.path.exists(date_location)):
         os.mkdir(date_location)
 
-    start_time = time.perf_counter()
-
     # Get json file with faxes and their ids
     dump_json(
         url=faxurl,
@@ -60,11 +58,19 @@ def main():
         poppler_path=os.getenv("POPPLER_LOCATION")
     )
 
-    end_time = time.perf_counter()
-    execution_time = end_time - start_time
-    print (f"Program ran in {execution_time/60:.2f} minutes")
 
 
 
 # ========== Calling the main function ============
+
+start_time = time.perf_counter()
+
+# for date in range(2,7):
+#     main(date=f"05-0{date}-2025")
+
+
 main()
+
+end_time = time.perf_counter()
+execution_time = end_time - start_time
+print (f"Program ran in {execution_time/60:.2f} minutes")
