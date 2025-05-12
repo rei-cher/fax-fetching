@@ -33,7 +33,7 @@ def extract_text(pdf_path, poppler_path):
             clean_image = preprocess_image(image)
             text+=pytesseract.image_to_string(clean_image) + "\n"
         
-        print(text)
+        # print(text)
         return text
     except Exception as e:
         print(f"Error extracting text from {pdf_path}: {e}")

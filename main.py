@@ -65,8 +65,8 @@ def main(date=None):
 
 start_time = time.perf_counter()
 
-# for date in range(2,7):
-#     main(date=f"05-0{date}-2025")
+# for date in range(10, 12):
+#     main(date=f"05-{date}-2025")
 
 
 main()
