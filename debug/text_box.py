@@ -33,6 +33,7 @@ approval_patterns = [
     r"\bApproved for\b",
 ]
 
+# TODO: adjust denial letter patters 
 denial_patterns = [
     r"\byour request has been denied\b",
     r"\byour request was denied for the following reason\b",
@@ -60,6 +61,8 @@ def determine_insurance(text):
     """
     return next((insurance for insurance in insurance_types if insurance in text), None)
 
+
+# TODO: make a function to extract patinet's info from the denial letters 
 def find_approval_entities(text, insurance):
     """
     Based on the extracted ocr text and insurnace type from determine_insurance, get the patient info.
