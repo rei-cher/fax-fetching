@@ -31,6 +31,8 @@ approval_patterns = [
     r"\bThis drug has been approved\b",
     r"\bThis request has been reviewed and approved for the following time period\b",
     r"\bApproved for\b",
+    r"\bapproved the requast as follows\b",
+    r"\bthe request is approved for the following time period\b",
 ]
 
 # TODO: adjust denial letter patters 
@@ -233,14 +235,17 @@ insurance = None
 for entity in result:
     letter_type = determine_letter_type(entity)
     if letter_type:
+        print("Letter type recognized - ", letter_type)
         break
 
 for entity in result:
     insurance = determine_insurance(entity)
+    print("Insurance type recognized - ", insurance)
     if insurance:
         break
 
 if letter_type and insurance:
+    print(f"Letter type: {letter_type}\nInsurance: {insurance}")
     match letter_type:
         case "Approval":
             print(find_approval_entities(text=" ".join(result), insurance=insurance))
