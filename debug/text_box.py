@@ -1,13 +1,13 @@
 import cv2, pytesseract, re
 from pdf2image import convert_from_path
 
-name = "Approval_ANTONIA-FRENCH_n-a_OPZELURA"  # Healthfirst approval
+# name = "Approval_ANTONIA-FRENCH_n-a_OPZELURA"  # Healthfirst approval
 # name = "Approval_Angelin-Samuel_01-20-2014_ADAPALENE"   # Wellpoint approval
 # name = "Approval_Bryan-Bhagwandat _09-04-2006_CLOBETASOL"   # Fideli care approval
 # name = "Approval_CRISTIA-HERNANDEZ_3-12-2010_Doxycycline"   # Horizon approval
 # name = "Approval_NALINI-AJODHA_2-11-1969_TACROLIMUS"    # Prime Therapeutics - private horizon
-# name = "Approval_RAMONA-ROSA-ROSARIO_1-27-1945_TACROLIMUS"  # TODO: currently doesnt work
-# name = "Approval_SANTA-BAEZ_11-05-1975_COSENTYX"
+# name = "Approval_RAMONA-ROSA-ROSARIO_1-27-1945_TACROLIMUS"  # TODO: currently doesnt work ----- FIX: working
+name = "Approval_SANTA-BAEZ_11-05-1975_COSENTYX"
 # name = "Approval_Danny-Virovlyansky_n-a_ISOTRETINOIN"
 pdf = f"C:\\Users\\OFFICE\\Documents\\dump\\05-09-2025\\approvals\\{name}.pdf"
 pytesseract.pytesseract.tesseract_cmd = "C:\\Users\\OFFICE\\AppData\\Local\\Programs\\Tesseract-OCR\\tesseract.exe"
@@ -52,7 +52,6 @@ def determine_letter_type(text):
     for pattern in denial_patterns:
         if re.search(pattern, text):
             return "Denial"
-    return "Unknown"
 
 def determine_insurance(text):
     """
@@ -61,7 +60,7 @@ def determine_insurance(text):
     """
     return next((insurance for insurance in insurance_types if insurance in text), None)
 
-def find_entities(text, insurance):
+def find_approval_entities(text, insurance):
     """
     Based on the extracted ocr text and insurnace type from determine_insurance, get the patient info.
     For each insurance there is its own regex for patient info.
@@ -211,8 +210,6 @@ for i, page in enumerate(pages):
     boxes = sorted(boxes, key=lambda x: x[0])
     merged_boxes = merge_boxes(boxes)
 
-    insurance = ""
-    result = []
     for x, y, w, h in merged_boxes:
         if h > 200 and w > 200:
             roi = image[y:y+h, x:x+w]
@@ -222,20 +219,27 @@ for i, page in enumerate(pages):
             ocr_result = ocr_result.replace("\n", " ")
             # print(ocr_result)
             result.append(ocr_result) if ocr_result not in result else None
-            
-    for entity in result:
-        letter_type = determine_letter_type(entity)
-        insurance = determine_insurance(entity)
-        if insurance and letter_type:
-            print(f"Letter type is: {letter_type}")
-            print(f"Insurance is: {insurance}")
-            break
-
-    # if insurance:
-    #     for entiry in result:
-    #         print(find_entities(entiry, insurance))
-
-    # print(result)
 
     cv2.imwrite(f'./debug/images/page_boxes_{i}.jpg', image)
+
+letter_type = None
+insurance = None
+
+# print(result)
+        
+for entity in result:
+    letter_type = determine_letter_type(entity)
+    if letter_type:
+        break
+
+for entity in result:
+    insurance = determine_insurance(entity)
+    if insurance:
+        break
+
+if letter_type and insurance:
+    match letter_type:
+        case "Approval":
+            print(find_approval_entities(text=" ".join(result), insurance=insurance))
+        
 
