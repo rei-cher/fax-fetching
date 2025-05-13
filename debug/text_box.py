@@ -1,8 +1,14 @@
 import cv2, pytesseract, re
 from pdf2image import convert_from_path
 
-name = "Approval_ADRIANO-PAULINO_n-a_DUPIXENT"
-# name = "Approval_ADRIANO-PAULINO_n-a_DUPIXENT"
+name = "Approval_ANTONIA-FRENCH_n-a_OPZELURA"  # Healthfirst approval
+# name = "Approval_Angelin-Samuel_01-20-2014_ADAPALENE"   # Wellpoint approval
+# name = "Approval_Bryan-Bhagwandat _09-04-2006_CLOBETASOL"   # Fideli care approval
+# name = "Approval_CRISTIA-HERNANDEZ_3-12-2010_Doxycycline"   # Horizon approval
+# name = "Approval_NALINI-AJODHA_2-11-1969_TACROLIMUS"    # Prime Therapeutics - private horizon
+# name = "Approval_RAMONA-ROSA-ROSARIO_1-27-1945_TACROLIMUS"  # TODO: currently doesnt work
+# name = "Approval_SANTA-BAEZ_11-05-1975_COSENTYX"
+# name = "Approval_Danny-Virovlyansky_n-a_ISOTRETINOIN"
 pdf = f"C:\\Users\\OFFICE\\Documents\\dump\\05-09-2025\\approvals\\{name}.pdf"
 pytesseract.pytesseract.tesseract_cmd = "C:\\Users\\OFFICE\\AppData\\Local\\Programs\\Tesseract-OCR\\tesseract.exe"
 
@@ -11,37 +17,134 @@ pages = convert_from_path(pdf, poppler_path="C:\\Users\\OFFICE\\Documents\\poppl
 
 insurance_types = [
     "Healthfirst",
+    "Wellpoint",
+    "Fidelis Care",
+    "HORIZON",
+    "Prime Therapeutics"    # Private horizon
 ]
 
-name_patterns = [
-    r'Member Name:\s+((?:[A-Z][a-z]*\s*)+)*',
-    r'Member:\s+((?:[A-Z][a-z]*\s*)+)*',
-    r'Re\s+((?:[A-Z][a-z]*\s*)+)*',
-    r'Dear \s+([A-Z]+)\s+([A-Z]+)',
-]
-dob_patterns = [
-    r'Date of Birth:\s*:\s*([\d\/\-\.\s]+)',
-    r'DOB:\s*:\s*([\d\/\-\.\s]+)',
+approval_patterns = [
+    r"\bhas been approved\b",
+    r"\bType of coverage approved: Prior Authorization\b",
+    r"\bType of coverage approved: Non-Formulary\b",
+    r"\bpproved for\b",
+    r"\bThis drug has been approved\b",
+    r"\bThis request has been reviewed and approved for the following time period\b",
+    r"\bApproved for\b",
 ]
 
-medication_patterns = [
-    r'drug\(s\):\s*\n*([A-Z]+)',
-    r'Medication in Question:\s*\n*([A-Z]+)',
-    r'Medication in Question:\s*\n*([A-Z]+)',
+denial_patterns = [
+    r"\byour request has been denied\b",
+    r"\byour request was denied for the following reason\b",
+    r"\bthe prior authorization is denied\b",
+    r"\bwe have denied\b",
+    r"\bwe have rejected\b",
+    r"\bnot covered\b",
+    r"\bx denying your request for\b",
+    r"\bwe are not approving this medication because\b",
+    r"\bthis is the reason for the denial\b",
 ]
+
+def determine_letter_type(text):
+    for pattern in approval_patterns:
+        if re.search(pattern, text):
+            return "Approval"
+    for pattern in denial_patterns:
+        if re.search(pattern, text):
+            return "Denial"
+    return "Unknown"
 
 def determine_insurance(text):
-    for insurance in insurance_types:
-        if insurance in text:
-            return insurance
+    """
+    From the extracted ocr text, matching the words with the list of pre-exist insurances.
+    If there is a match, returns the name of the insurance.
+    """
+    return next((insurance for insurance in insurance_types if insurance in text), None)
 
 def find_entities(text, insurance):
+    """
+    Based on the extracted ocr text and insurnace type from determine_insurance, get the patient info.
+    For each insurance there is its own regex for patient info.
+    """
+
+    patient_name = "Unknown"
+    patient_dob = "Unknown"
+    patient_drug = "Unknown"
+
     match insurance:
         case "Healthfirst":
-            patient_name_match = re.search(r'Member Name:\s+([A-Za-z ]+)', text)
+            patient_name_match = re.search(r'Member Name:\s*(.*?)\s+Member\b', text)
+            patient_drug_match = re.search(r'drug\(s\):\s*\n*\s*([A-Z][A-Z0-9]+)', text)
             if patient_name_match:
                 patient_name = patient_name_match.group(1).strip().replace(" ", "-")
-                print(patient_name)
+                patient_drug = patient_drug_match.group(1)
+                # print(f"Patient name: {patient_name}")
+                # print(f"Patient drug: {patient_drug}")
+
+        case "Wellpoint":
+            patient_info_match = re.search(r'Member:\s*\d+,\s*([A-Za-z\s]+),\s*(\d{2}/\d{2}/\d{4})', text)
+            patient_drug_match = re.search(r'follows:\s*\n*\s*([A-Z][A-Z0-9]+)', text)
+            if patient_info_match:
+                patient_name = patient_info_match.group(1).strip().replace(" ", "-")
+                patient_dob = patient_info_match.group(2).replace("/", "-")
+                # print(f"Patient name: {patient_name}")
+                # print(f"Patient dob: {patient_dob}")
+            if patient_drug_match:
+                patient_drug = patient_drug_match.group(1)
+                # print(f"Patient drug: {patient_drug}")
+
+        case "Fidelis Care":
+            patient_name_match = re.search(r'Member:\s*([A-Za-z\s\-]+)\s+ID', text) or re.search(r'Member Name:\s*([A-Za-z\s\-]+)\s+Member', text)
+            patient_dob_match = re.search(r'DOB:\s*(\d{2}/\d{2}/\d{4})', text)
+            patient_drug_match = re.search(r'Question:\s*\n*\s*([A-Z][A-Z0-9]+)', text) or re.search(r'Service:\s*\n*\s*([A-Z][A-Z0-9]+)', text)
+            if patient_name_match:
+                patient_name = patient_name_match.group(1).strip().replace(" ", "-")
+                # print(f"Patient name: {patient_name}")
+            if patient_dob_match:
+                patient_dob = patient_dob_match.group(1).replace("/", "-")
+                # print(f"Patient dob: {patient_dob}")
+            if patient_drug_match:
+                patient_drug = patient_drug_match.group(1)
+                # print(f"Patient drug: {patient_drug}")
+        
+        case "HORIZON":
+            pattern = re.search(r'has requested\s+([A-Za-z\s]+?)\s+for\s+([A-Z\s]+?),\s*ID\s*#\s*\d+,\s*DOB\s*([0-9/]+)', text, re.DOTALL)
+            if pattern:
+                patient_name = pattern.group(2).replace('\n', ' ').strip().replace(" ", "-")
+                # print(f"Patient name: {patient_name}")
+                patient_dob = pattern.group(3).strip().replace("/", "-")
+                # print(f"Patient dob: {patient_dob}")
+                patient_drug = pattern.group(1).strip().split(" ")[0]
+                # print(f"Patient drug: {patient_drug}")
+        
+        case "Prime Therapeutics":
+            patterns = [
+                r'regarding:\s+([A-Z ]+?)\s+Drug:\s+(.+?)\s+Date of Birth:.*?(\b\d{1,2}/\d{1,2}/\d{4}\b)',
+                r'Name:\s+(.+?)\s+First Name:\s+([A-Za-z\-]+)\s+Strength:.*?Last Name:\s+([A-Za-z\-]+).*?Date of Birth:\s+(\d{1,2}/\d{1,2}/\d{4})',
+                r'Re:\s*([A-Z\s\-]+?)\s+Member\s*DOB:\s*(\d{1,2}/\d{1,2}/\d{4}).*?Why we are writing:\s*([A-Z0-9 .%/-]+?)\s+has been'
+            ]
+
+            for pattern in patterns:
+                result = re.search(pattern, text)
+                if result:
+                    if pattern.startswith('regarding:'):
+                        patient_name = result.group(1).strip().replace(" ", "-")
+                        patient_drug = result.group(2).strip().split(" ")[0]
+                        patient_dob = result.group(3).strip().replace("/", "-")
+
+                    elif pattern.startswith('Re:'):
+                        patient_name = result.group(1).strip().replace(" ", "-")
+                        patient_dob = result.group(2).strip().replace("/", "-")
+                        patient_drug = result.group(3).strip().split(" ")[0]
+
+                    elif pattern.startswith('Name'):  # Last pattern (drug name first, then first/last name, then DOB)
+                        first_name = result.group(2).strip()
+                        last_name = result.group(3).strip()
+                        patient_name = f"{first_name}-{last_name}"
+                        patient_drug = result.group(1).strip().split(" ")[0]
+                        patient_dob = result.group(4).strip().replace("/", "-")
+
+    return patient_name, patient_dob, patient_drug
 
 def merge_boxes(boxes, overlap_thresh=30):
     merged = []
@@ -95,7 +198,7 @@ for i, page in enumerate(pages):
     thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
     
     # create an individual kernals
-    kernal = cv2.getStructuringElement(cv2.MORPH_RECT, (3,40))
+    kernal = cv2.getStructuringElement(cv2.MORPH_RECT, (3,80))
 
     # dilate image
     dilate = cv2.dilate(thresh, kernal, iterations=2)
@@ -118,16 +221,21 @@ for i, page in enumerate(pages):
             ocr_result = pytesseract.image_to_string(roi)
             ocr_result = ocr_result.replace("\n", " ")
             # print(ocr_result)
-            result.append(ocr_result)
+            result.append(ocr_result) if ocr_result not in result else None
             
     for entity in result:
+        letter_type = determine_letter_type(entity)
         insurance = determine_insurance(entity)
-        if insurance:
+        if insurance and letter_type:
+            print(f"Letter type is: {letter_type}")
             print(f"Insurance is: {insurance}")
             break
 
-    if insurance:
-        for entity in result:
-            find_entities(entity, insurance)
+    # if insurance:
+    #     for entiry in result:
+    #         print(find_entities(entiry, insurance))
+
+    # print(result)
 
     cv2.imwrite(f'./debug/images/page_boxes_{i}.jpg', image)
+
