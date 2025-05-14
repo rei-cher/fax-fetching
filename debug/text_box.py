@@ -1,4 +1,4 @@
-import cv2, pytesseract, re
+import cv2, pytesseract, re, os
 from pdf2image import convert_from_path
 
 # name = "Approval_ANTONIA-FRENCH_n-a_OPZELURA"  # Healthfirst approval
@@ -7,9 +7,11 @@ from pdf2image import convert_from_path
 # name = "Approval_CRISTIA-HERNANDEZ_3-12-2010_Doxycycline"   # Horizon approval
 # name = "Approval_NALINI-AJODHA_2-11-1969_TACROLIMUS"    # Prime Therapeutics - private horizon
 # name = "Approval_RAMONA-ROSA-ROSARIO_1-27-1945_TACROLIMUS"  # TODO: currently doesnt work ----- FIX: working
-name = "Approval_SANTA-BAEZ_11-05-1975_COSENTYX"
 # name = "Approval_Danny-Virovlyansky_n-a_ISOTRETINOIN"
-pdf = f"C:\\Users\\OFFICE\\Documents\\dump\\05-09-2025\\approvals\\{name}.pdf"
+# pdf = f"C:\\Users\\OFFICE\\Documents\\dump\\05-09-2025\\approvals\\{name}.pdf"
+# name = "Approval_Trang-Kieu_03-24-1979_Dupixent"
+# name = "Approval_Unknown_Unknown_Unknown_417724dd-b096-45d2-8044-8d80049ee792"
+# pdf = f"C:\\Users\\OFFICE\\Documents\\dump\\05-13-2025\\approvals\\{name}.pdf"
 pytesseract.pytesseract.tesseract_cmd = "C:\\Users\\OFFICE\\AppData\\Local\\Programs\\Tesseract-OCR\\tesseract.exe"
 
 # since the pdf is not an image, we have to convert each page into the image
@@ -20,7 +22,11 @@ insurance_types = [
     "Wellpoint",
     "Fidelis Care",
     "HORIZON",
-    "Prime Therapeutics"    # Private horizon
+    "Prime Therapeutics",    # Private horizon
+    "Clover Health",
+    "UnitedHealthcare",    # UnitedHealthCare
+    "Express Scripts",
+    "WellCare"
 ]
 
 approval_patterns = [
@@ -33,19 +39,16 @@ approval_patterns = [
     r"\bApproved for\b",
     r"\bapproved the requast as follows\b",
     r"\bthe request is approved for the following time period\b",
+    r"\bwriting to let you know that we have approved\b",
+    r"\bAPPROVAL NOTICE\b",
 ]
 
 # TODO: adjust denial letter patters 
 denial_patterns = [
-    r"\byour request has been denied\b",
-    r"\byour request was denied for the following reason\b",
-    r"\bthe prior authorization is denied\b",
-    r"\bwe have denied\b",
-    r"\bwe have rejected\b",
-    r"\bnot covered\b",
-    r"\bx denying your request for\b",
-    r"\bwe are not approving this medication because\b",
-    r"\bthis is the reason for the denial\b",
+    r"\bReason for Denial:\b",
+    r"\b__X__ Denying you request\b",
+    r"\bRE: Denial of request for coverage\b",
+    r"\bRE: Denial of request for coverage\b",
 ]
 
 def determine_letter_type(text):
@@ -71,19 +74,18 @@ def find_approval_entities(text, insurance):
     For each insurance there is its own regex for patient info.
     """
 
-    patient_name = "Unknown"
-    patient_dob = "Unknown"
-    patient_drug = "Unknown"
+    patient_name = None
+    patient_dob = None
+    patient_drug = None
 
     match insurance:
         case "Healthfirst":
-            patient_name_match = re.search(r'Member Name:\s*(.*?)\s+Member\b', text)
-            patient_drug_match = re.search(r'drug\(s\):\s*\n*\s*([A-Z][A-Z0-9]+)', text)
+            patient_name_match = re.search(r'Member Name:\s*(.*?)\s+Member\b', text) or re.search(r'Dear ([A-Z ]+):', text)
+            patient_drug_match = re.search(r'drug\(s\):\s*\n*\s*([A-Z][A-Z0-9]+)', text) or re.search(r'approved your ([A-Za-z0-9 %]+)\.', text)
             if patient_name_match:
                 patient_name = patient_name_match.group(1).strip().replace(" ", "-")
-                patient_drug = patient_drug_match.group(1)
-                # print(f"Patient name: {patient_name}")
-                # print(f"Patient drug: {patient_drug}")
+            if patient_drug_match:
+                patient_drug = patient_drug_match.group(1).split(" ")[0]
 
         case "Wellpoint":
             patient_info_match = re.search(r'Member:\s*\d+,\s*([A-Za-z\s]+),\s*(\d{2}/\d{2}/\d{4})', text)
@@ -91,11 +93,8 @@ def find_approval_entities(text, insurance):
             if patient_info_match:
                 patient_name = patient_info_match.group(1).strip().replace(" ", "-")
                 patient_dob = patient_info_match.group(2).replace("/", "-")
-                # print(f"Patient name: {patient_name}")
-                # print(f"Patient dob: {patient_dob}")
             if patient_drug_match:
                 patient_drug = patient_drug_match.group(1)
-                # print(f"Patient drug: {patient_drug}")
 
         case "Fidelis Care":
             patient_name_match = re.search(r'Member:\s*([A-Za-z\s\-]+)\s+ID', text) or re.search(r'Member Name:\s*([A-Za-z\s\-]+)\s+Member', text)
@@ -103,23 +102,17 @@ def find_approval_entities(text, insurance):
             patient_drug_match = re.search(r'Question:\s*\n*\s*([A-Z][A-Z0-9]+)', text) or re.search(r'Service:\s*\n*\s*([A-Z][A-Z0-9]+)', text)
             if patient_name_match:
                 patient_name = patient_name_match.group(1).strip().replace(" ", "-")
-                # print(f"Patient name: {patient_name}")
             if patient_dob_match:
                 patient_dob = patient_dob_match.group(1).replace("/", "-")
-                # print(f"Patient dob: {patient_dob}")
             if patient_drug_match:
                 patient_drug = patient_drug_match.group(1)
-                # print(f"Patient drug: {patient_drug}")
         
         case "HORIZON":
             pattern = re.search(r'has requested\s+([A-Za-z\s]+?)\s+for\s+([A-Z\s]+?),\s*ID\s*#\s*\d+,\s*DOB\s*([0-9/]+)', text, re.DOTALL)
             if pattern:
                 patient_name = pattern.group(2).replace('\n', ' ').strip().replace(" ", "-")
-                # print(f"Patient name: {patient_name}")
                 patient_dob = pattern.group(3).strip().replace("/", "-")
-                # print(f"Patient dob: {patient_dob}")
                 patient_drug = pattern.group(1).strip().split(" ")[0]
-                # print(f"Patient drug: {patient_drug}")
         
         case "Prime Therapeutics":
             patterns = [
@@ -147,6 +140,44 @@ def find_approval_entities(text, insurance):
                         patient_name = f"{first_name}-{last_name}"
                         patient_drug = result.group(1).strip().split(" ")[0]
                         patient_dob = result.group(4).strip().replace("/", "-")
+        
+        case "Clover Health":
+            patient_name_match = re.search(r'Member Name:\s*([A-Za-z\s\-]+)\s+Member', text)
+            patient_drug_match = re.search(r'prescription drug\(s\):\s*\n*\s*([A-Z][A-Z0-9]+)', text)
+            if patient_name_match:
+                patient_name = patient_name_match.group(1).strip().replace(" ", "-")
+            if patient_drug_match:
+                patient_drug = patient_drug_match.group(1)
+        
+        case "UnitedHealthcare":
+            patient_name_match = re.search(r'Member Name_ \| ([A-Za-z]+(?: [A-Za-z]+)+)', text) or re.search(r'Patient:\s*([A-Za-z\s\-]+)\s+Case', text)
+            patient_dob_match = re.search(r'Member DOB (\d{2}/\d{2}/\d{4})', text)
+            patient_drug_match = re.search(r'Drug Name (.+?) Approval', text) or re.search(r'inform you that the (.+?) requested', text)
+            if patient_name_match:
+                patient_name = patient_name_match.group(1).strip().replace(" ", "-")
+            if patient_dob_match:
+                patient_dob = patient_dob_match.group(1).replace("/", "-")
+            if patient_drug_match:
+                patient_drug = patient_drug_match.group(1).split(" ")[0]
+
+        case "Express Scripts":
+            patient_name_match = re.search(r'Patient:\s*([A-Za-z\s\-]+)\s+Physician', text) or re.search(r'Memver name:\s*([A-Za-z\s\-]+)\s+Member', text)
+            patient_dob_match = re.search(r'Patient DOB: (\d{2}/\d{2}/\d{4})', text)
+            patient_drug_match = re.search(r'request for your patient to obtain coverage for (.+?) under', text)
+            if patient_name_match:
+                patient_name = patient_name_match.group(1).strip().replace(" ", "-")
+            if patient_dob_match:
+                patient_dob = patient_dob_match.group(1).replace("/", "-")
+            if patient_drug_match:
+                patient_drug = patient_drug_match.group(1).split(" ")[0]
+
+        case "WellCare":
+            patient_name_match = re.search(r'Dear\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*):', text)
+            patient_drug_match = re.search(r'request from you or your doctor for (.+?)\.', text)
+            if patient_name_match:
+                patient_name = patient_name_match.group(1).strip().replace(" ", "-")
+            if patient_drug_match:
+                patient_drug = patient_drug_match.group(1).split(" ")[0]
 
     return patient_name, patient_dob, patient_drug
 
@@ -199,13 +230,18 @@ for i, page in enumerate(pages):
     blur = cv2.GaussianBlur(gray, (7,7), 0)
 
     # threshold image
-    thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+    thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    adaptive_tresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 51, 5)
+    # cv2.imshow("thresh", cv2.resize(thresh, (560, 900)))
+    # cv2.imshow("adaptive_tresh", cv2.resize(adaptive_tresh, (560, 900)))
+    # cv2.imshow("original", cv2.resize(image, (560, 900)))
+    # cv2.waitKey(0)
     
     # create an individual kernals
     kernal = cv2.getStructuringElement(cv2.MORPH_RECT, (3,80))
 
     # dilate image
-    dilate = cv2.dilate(thresh, kernal, iterations=2)
+    dilate = cv2.dilate(adaptive_tresh, kernal, iterations=2)
     # cv2.imwrite(f'./debug/images/page_dilate_{i}.jpg', dilate)
 
     # create contours
@@ -215,9 +251,10 @@ for i, page in enumerate(pages):
     boxes = sorted(boxes, key=lambda x: x[0])
     merged_boxes = merge_boxes(boxes)
 
+
     for x, y, w, h in merged_boxes:
         if h > 200 and w > 200:
-            roi = image[y:y+h, x:x+w]
+            roi = adaptive_tresh[y:y+h, x:x+w]
             # cv2.rectangle color parameter is BGR
             cv2.rectangle(image, (x, y), (x + w, y + h), (36, 255, 12), 1)
             ocr_result = pytesseract.image_to_string(roi)
@@ -230,7 +267,16 @@ for i, page in enumerate(pages):
 letter_type = None
 insurance = None
 
-# print(result)
+
+# print(" ".join(result))
+
+try:
+    for filename in os.listdir(os.path.join(os.getcwd(), "debug\\images")):
+        file_path = os.path.join(os.path.join(os.getcwd(), "debug\\images"), filename)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+except Exception as e:
+    print(f"Error deleting file - {e}")
         
 for entity in result:
     letter_type = determine_letter_type(entity)
