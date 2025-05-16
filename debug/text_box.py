@@ -1,4 +1,4 @@
-import cv2, pytesseract, re, os, json, time, requests
+import cv2, pytesseract, re, os, json, time, requests, shutil
 from pdf2image import convert_from_path
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -425,6 +425,33 @@ def validate_token(token, url, location):
         "location-id": location
     }).status_code
 
+def copy_and_rename_pdf(src_path: str, file_result: dict, dest_root: str):
+    """
+    Copy the PDF at src_path into a subfolder of dest_root named for its letter_type,
+    and rename it to include letter_type, insurance, patient_name, dob, and drug,
+    replacing any None with 'Unknown'.
+    """
+    # pull out and normalize each component, defaulting to 'Unknown'
+    lt = (file_result.get("letter_type") or "Unknown").replace(" ", "-")
+    ins = (file_result.get("insurance") or "Unknown").replace(" ", "-")
+    
+    # unpack extracted_entities tuple if present
+    name, dob, drug = ("Unknown", "Unknown", "Unknown")
+    if file_result.get("extracted_entities"):
+        ent = file_result["extracted_entities"]
+        name = (ent[0] or "Unknown").replace(" ", "-")
+        dob  = (ent[1] or "Unknown").replace(" ", "-")
+        drug = (ent[2] or "Unknown").replace(" ", "-")
+    
+    # build destination directory and filename
+    dest_dir = os.path.join(dest_root, lt)
+    os.makedirs(dest_dir, exist_ok=True)
+    new_fname = f"{lt}_{ins}_{name}_{dob}_{drug}.pdf"
+    dest_path = os.path.join(dest_dir, new_fname)
+    
+    # copy
+    shutil.copyfile(src_path, dest_path)
+
 def main(file=None):
 
     start_time = time.perf_counter()
@@ -522,6 +549,11 @@ def main(file=None):
             if os.path.exists(temp_pdf_path):
                 analyze_and_extract(file_path=temp_pdf_path, file=pdf_id)
                 # os.remove(temp_pdf_path)
+                copy_and_rename_pdf(
+                        src_path=temp_pdf_path,
+                        file_result=all_results[-1],
+                        dest_root=date_location
+                    )
     
             count += 1
 
