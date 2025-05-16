@@ -39,7 +39,8 @@ approval_patterns = [
     r"writing to let you know that we have approved",
     r"APPROVAL NOTICE",
     r"Prior Authorization Status: Approved",
-    r"no prior authorization required"
+    r"no prior authorization required",
+    r"We've approved your request for coverage",
 ]
 
 # TODO: adjust denial letter patters 
@@ -47,9 +48,14 @@ denial_patterns = [
     r"Reason for Denial:",
     r"__X__ Denying your request for",
     r"__X__Denying your request for",
+    r"__X%__Denying your request for",
+    r"__X%___Denying your request for",
     r"RE: Denial of request for coverage",
     r"denied the request for the following reason",
     r"We are unable to approve your request for this drug",
+    r"denied the prior authorization",
+    r"After reviewing the information sent with your request, it was determined that this request does not meet the criteria for medical necessity",
+
 ]
 
 request_patterns = [
@@ -57,6 +63,25 @@ request_patterns = [
     r'is waiting for their medication',
     r'A Prior Authorization has been started for',
     r'the PA started for your patient',
+    r'has been rejected and requires prior authorization',
+    r'ALTERNATIVE REQUESTED :NOT COVERED',
+    r'Prior Authorization has already been created',
+    r'A Prior Authorization has been started  for',
+    r'RESPONSE REQUESTED:  Please send a new prescription',
+    r'PRIOR AUTHORIZATION REQUEST',
+    r'Your request for prior authorization has been denied. Complete and fax this appeal to the plan today so your patient can receive their medication'
+]
+
+received_request_patterns = [
+    r'Request Status: Received'
+]
+
+trash_pattern = [
+    r"Duplicate request. An approved prior authorization is already in the system"
+]
+
+clinical_pattern = [
+    r'clinical review'
 ]
 
 def determine_letter_type(text):
@@ -69,6 +94,15 @@ def determine_letter_type(text):
     for pattern in request_patterns:
         if re.search(pattern, text):
             return "PA-Request"
+    for pattern in received_request_patterns:
+        if re.search(pattern, text):
+            return "Received-Request"
+    for pattern in trash_pattern:
+        if re.search(pattern, text):
+            return "Trash"
+    for pattern in clinical_pattern:
+        if re.search(pattern, text):
+            return "Clinical"
 
 def determine_insurance(text):
     """
@@ -249,11 +283,32 @@ def find_denial_entitied(text, insurance):
             if patient_drug_match:
                 patient_drug = patient_drug_match.group(1).split(" ")[0]
 
+            # extra case
+            if not patient_name and not patient_dob:
+                match = re.search(r"RE:\s*([A-Z]+\s+[A-Z]+)\s+(\d{2}/\d{2}/\d{4})", text)
+                patient_drug_match = re.search(r'authorization for (.+?). If', text)
+                if match:
+                    patient_name = match.group(1)
+                    patient_dob = match.group(2)
+                if patient_drug_match:
+                    patient_drug = patient_drug_match.group(1).split(" ")[0]
+
         case "CVS Caremark":
             patient_name_match = re.search(r'Dear\s+([A-Z\s\-]+):', text)
             patient_drug_match = re.search(r'request for coverage of (.+?) Dear', text)
             if patient_name_match:
                 patient_name = patient_name_match.group(1).strip().replace(" ", "-")
+            if patient_drug_match:
+                patient_drug = patient_drug_match.group(1).split(" ")[0]
+
+        case "Prime Therapeutics":
+            patient_name_match = re.search(r'regarding:\s+([A-Z\s\-]+)\sDrug', text)
+            patient_dob_match = re.search(r'Requested:\s*(\d{1,2}/\d{1,2}/\d{4})', text)
+            patient_drug_match = re.search(r'Drug: (.+?) Date', text)
+            if patient_name_match:
+                patient_name = patient_name_match.group(1).strip().replace(" ", "-")
+            if patient_dob_match:
+                patient_dob = patient_dob_match.group(1).replace("/", "-")
             if patient_drug_match:
                 patient_drug = patient_drug_match.group(1).split(" ")[0]
 
@@ -425,11 +480,11 @@ def validate_token(token, url, location):
         "location-id": location
     }).status_code
 
-def copy_and_rename_pdf(src_path: str, file_result: dict, dest_root: str):
+def copy_and_rename_pdf(src_path: str, file_result: dict, dest_root: str, file_name: str):
     """
     Copy the PDF at src_path into a subfolder of dest_root named for its letter_type,
-    and rename it to include letter_type, insurance, patient_name, dob, and drug,
-    replacing any None with 'Unknown'.
+    and rename it to include letter_type, patient_name, dob, and drug,
+    replacing any None with 'Unknown'. If file already exists in the folder (ex: with 'Unknown', then add to the name a fax_id - file_name).
     """
     # pull out and normalize each component, defaulting to 'Unknown'
     lt = (file_result.get("letter_type") or "Unknown").replace(" ", "-")
@@ -446,8 +501,13 @@ def copy_and_rename_pdf(src_path: str, file_result: dict, dest_root: str):
     # build destination directory and filename
     dest_dir = os.path.join(dest_root, lt)
     os.makedirs(dest_dir, exist_ok=True)
-    new_fname = f"{lt}_{ins}_{name}_{dob}_{drug}.pdf"
+    new_fname = f"{lt}_{name}_{dob}_{drug}.pdf"
     dest_path = os.path.join(dest_dir, new_fname)
+
+    # check if the file already exists in the directory
+    if os.path.exists(dest_path):
+        new_fname = f"{lt}_{name}_{dob}_{drug}_{file_name}.pdf"
+        dest_path = os.path.join(dest_dir, new_fname)
     
     # copy
     shutil.copyfile(src_path, dest_path)
@@ -552,7 +612,8 @@ def main(file=None):
                 copy_and_rename_pdf(
                         src_path=temp_pdf_path,
                         file_result=all_results[-1],
-                        dest_root=date_location
+                        dest_root=date_location,
+                        file_name=pdf_id
                     )
     
             count += 1
