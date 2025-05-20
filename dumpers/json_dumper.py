@@ -8,6 +8,8 @@ def dump_json(url, token, location, path, date):
 
     if (os.path.exists(filepath)):
         print(f"Json for the {date} already exists")
+        return filepath
+    
     else:
     # getting and saving faxes info into json 
         try:
@@ -21,6 +23,7 @@ def dump_json(url, token, location, path, date):
                 with open(filepath, 'w') as f:
                     json.dump(response.json(), f, indent=4)
                 print(f"Data successfully written to {filepath}")
+                return filepath
             else:
                 print(response.text)
         except Exception as e:
