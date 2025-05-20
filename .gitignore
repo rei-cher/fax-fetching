@@ -3,4 +3,4 @@ header.txt
 .venv*
 debug/*
 debug/images/*
-results.json
+*.json
