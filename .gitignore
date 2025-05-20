@@ -1,5 +1,6 @@
 header.txt
 .env
 .venv*
-
+debug/*
 debug/images/*
+result.json

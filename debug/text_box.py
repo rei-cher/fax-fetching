@@ -23,7 +23,8 @@ insurance_types = [
     "WellCare",
     "Aetna",
     "Horizon",
-    "CVS Caremark"
+    "CVS Caremark",
+    "Anthem"
 ]
 
 approval_patterns = [
@@ -41,15 +42,27 @@ approval_patterns = [
     r"Prior Authorization Status: Approved",
     r"no prior authorization required",
     r"We've approved your request for coverage",
+    r"the request was APPROVED",
+    r"has approved a request from you or your doctor for"
+    r"We approved coverage under the member's prescription drug benefits for"
 ]
 
 # TODO: adjust denial letter patters 
 denial_patterns = [
     r"Reason for Denial:",
     r"__X__ Denying your request for",
+    r"__X___Denying your request for",
     r"__X__Denying your request for",
+    r"__x__ Denying your request for",
     r"__X%__Denying your request for",
     r"__X%___Denying your request for",
+    r"__x%__Denying your request for",
+    r"_xX__Denying your request for",
+    r"__xX__Denying your request for",
+    r"X_ Denying your request for",
+    r"X_Denying your request for",
+    r"x_ Denying your request for",
+    r"x_Denying your request for",
     r"RE: Denial of request for coverage",
     r"denied the request for the following reason",
     r"We are unable to approve your request for this drug",
@@ -84,6 +97,13 @@ clinical_pattern = [
     r'clinical review'
 ]
 
+def sanitize_filename(value: str) -> str:
+    """
+    Sanitize input to make it safe for use in filenames.
+    Removes or replaces problematic characters like / \\ : * ? " < > | !
+    """
+    return re.sub(r'[\/\\:\*\?"<>\|!]', '', value)
+
 def determine_letter_type(text):
     for pattern in approval_patterns:
         if re.search(pattern, text):
@@ -100,9 +120,9 @@ def determine_letter_type(text):
     for pattern in trash_pattern:
         if re.search(pattern, text):
             return "Trash"
-    for pattern in clinical_pattern:
-        if re.search(pattern, text):
-            return "Clinical"
+    # for pattern in clinical_pattern:
+    #     if re.search(pattern, text):
+    #         return "Clinical"
 
 def determine_insurance(text):
     """
@@ -153,7 +173,7 @@ def find_approval_entities(text, insurance):
                 patient_drug = patient_drug_match.group(1)
         
         case "Horizon":
-            pattern = re.search(r'(?:has|hag) (?:requested|requosted)\s+([A-Za-z\s]+?)\s+for\s+([A-Z\s]+?),\s*(?:ID|1D|\[D)\s*#\s*\d+,\s*DOB\s*(\d{1,2}/\d{1,2}/\d{4})', text, re.DOTALL)
+            pattern = re.search(r'(?:has|hag) (?:requested|requosted)\s+([A-Za-z\-]+?)\s+for\s+([A-Z\s]+?),\s*(?:ID|1D|LD|\[D)\s*#\s*\d+,\s*DOB\s*(\d{1,2}/\d{1,2}/\d{4})', text, re.DOTALL)
             if pattern:
                 patient_name = pattern.group(2).replace('\n', ' ').strip().replace(" ", "-")
                 patient_dob = pattern.group(3).strip().replace("/", "-")
@@ -188,7 +208,7 @@ def find_approval_entities(text, insurance):
         
         case "Clover Health" | "CVS Caremark":
             patient_name_match = re.search(r'Member Name:\s*([A-Za-z\s\-]+)\s+Member', text)
-            patient_drug_match = re.search(r'prescription drug\(s\):\s*\n*\s*([A-Z][A-Z0-9]+)', text)
+            patient_drug_match = re.search(r'prescription drug\(s\):\s*\n*\s*([A-Z][A-Z0-9]+)', text) or re.search(r'for coverage of (.*?)\.\s+Dear', text)
             if patient_name_match:
                 patient_name = patient_name_match.group(1).strip().replace(" ", "-")
             if patient_drug_match:
@@ -236,6 +256,17 @@ def find_approval_entities(text, insurance):
 
         case "Aetna":
             pass
+
+        case "Anthem":
+            patient_name_match = re.search(r'Member Name:\s*(.*?)\s*Member\b', text)
+            patient_dob_match = re.search(r'Member date of birth:\s*(\d{2}/\d{2}/\d{4})', text)
+            patient_drug_match = re.search(r'request as follaws:\s*(.+?)\s+quantity', text)
+            if patient_name_match:
+                patient_name = patient_name_match.group(1).strip().replace(" ", "-")
+            if patient_dob_match:
+                patient_dob = patient_dob_match.group(1).replace("/", "-")
+            if patient_drug_match:
+                patient_drug = patient_drug_match.group(1)
 
     return patient_name, patient_dob, patient_drug
 
@@ -487,16 +518,16 @@ def copy_and_rename_pdf(src_path: str, file_result: dict, dest_root: str, file_n
     replacing any None with 'Unknown'. If file already exists in the folder (ex: with 'Unknown', then add to the name a fax_id - file_name).
     """
     # pull out and normalize each component, defaulting to 'Unknown'
-    lt = (file_result.get("letter_type") or "Unknown").replace(" ", "-")
-    ins = (file_result.get("insurance") or "Unknown").replace(" ", "-")
+    lt = sanitize_filename(file_result.get("letter_type") or "Unknown").replace(" ", "-")
+    ins = sanitize_filename(file_result.get("insurance") or "Unknown").replace(" ", "-")
     
     # unpack extracted_entities tuple if present
     name, dob, drug = ("Unknown", "Unknown", "Unknown")
     if file_result.get("extracted_entities"):
         ent = file_result["extracted_entities"]
-        name = (ent[0] or "Unknown").replace(" ", "-")
-        dob  = (ent[1] or "Unknown").replace(" ", "-")
-        drug = (ent[2] or "Unknown").replace(" ", "-")
+        name = sanitize_filename((ent[0] or "Unknown").replace(" ", "-"))
+        dob  = sanitize_filename((ent[1] or "Unknown").replace(" ", "-"))
+        drug = sanitize_filename((ent[2] or "Unknown").replace(" ", "-"))
     
     # build destination directory and filename
     dest_dir = os.path.join(dest_root, lt)
@@ -512,7 +543,7 @@ def copy_and_rename_pdf(src_path: str, file_result: dict, dest_root: str, file_n
     # copy
     shutil.copyfile(src_path, dest_path)
 
-def main(file=None):
+def main(date =None, file=None):
 
     start_time = time.perf_counter()
 
@@ -612,7 +643,7 @@ def main(file=None):
                 copy_and_rename_pdf(
                         src_path=temp_pdf_path,
                         file_result=all_results[-1],
-                        dest_root=date_location,
+                        dest_root=os.path.join(date_location, "test"),
                         file_name=pdf_id
                     )
     
@@ -627,6 +658,8 @@ def main(file=None):
 
 
 if __name__ == "__main__":
-    main()
+    # for date in range(16,17):
+    #     main(date=f"05-{date}-2025")
         
+    main()
 
