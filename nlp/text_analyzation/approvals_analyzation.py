@@ -136,4 +136,7 @@ def find_approval_entities(text, insurance):
             if patient_drug_match:
                 patient_drug = patient_drug_match.group(1)
 
-    return sanitize_filename(patient_name), sanitize_filename(patient_dob), sanitize_filename(patient_drug).split("-")[0]
+    if "-" in patient_drug:
+        patient_drug = patient_drug.replace("-", " ")
+
+    return patient_name, patient_dob, patient_drug[0]

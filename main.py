@@ -91,7 +91,7 @@ def main(date=None):
         print(f"Total: {count}\nPassed: {count-failed}\nFailed: {failed}")
 
 # ========== Calling the main function ============
-
+# ========== VERSION 0.2.1 ===========
 if __name__ == "__main__":
     start_time = time.perf_counter()
 

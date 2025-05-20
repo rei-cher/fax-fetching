@@ -1,4 +1,4 @@
-import shutil, os
+import shutil, os, json
 from nlp.nlp_analysis import analyze_and_extract
 
 # file_name is fax_id
@@ -32,7 +32,7 @@ def copy_and_rename_pdf(
     # name as fax_{fax_id}.pdf
 
     if lt == "Other":
-        dest_dir = os.path.join("S:\\Folders\\FAXES", f"{date}_test")
+        dest_dir = os.path.join("S:\\Folders\\FAXES", f"{date}")
         os.makedirs(dest_dir, exist_ok=True)
         file_name = f"fax_{file_name}.pdf"
         dest_path = os.path.join(dest_dir, file_name)
@@ -46,16 +46,16 @@ def copy_and_rename_pdf(
             dob  = (ent[1] or "Unknown").replace(" ", "-")
             drug = (ent[2] or "Unknown").replace(" ", "-")
     
-    # build destination directory and filename
-    dest_dir = os.path.join(dest_root, lt)
-    os.makedirs(dest_dir, exist_ok=True)
-    new_fname = f"{lt}_{name}_{dob}_{drug}.pdf"
-    dest_path = os.path.join(dest_dir, new_fname)
-
-    # check if the file already exists in the directory
-    if os.path.exists(dest_path):
-        new_fname = f"{lt}_{name}_{dob}_{drug}_{file_name}.pdf"
+        # build destination directory and filename
+        dest_dir = os.path.join(dest_root, lt)
+        os.makedirs(dest_dir, exist_ok=True)
+        new_fname = f"{lt}_{name}_{dob}_{drug}.pdf"
         dest_path = os.path.join(dest_dir, new_fname)
+
+        # check if the file already exists in the directory
+        if os.path.exists(dest_path):
+            new_fname = f"{lt}_{name}_{dob}_{drug}_{file_name}.pdf"
+            dest_path = os.path.join(dest_dir, new_fname)
     
     # copy
     shutil.move(src_path, dest_path)
