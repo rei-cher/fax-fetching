@@ -1,187 +1,142 @@
-import re, os, shutil, string
+import cv2, pytesseract, os
+from pdf2image import convert_from_path
+from .text_analyzation.approvals_analyzation import find_approval_entities
+from .text_analyzation.denials_analyzation import find_denial_entitied
+from .letter_type import determine_letter_type
+from .insurance_type import determine_insurance
 
-approval_patterns = [
-    r"\byour request has been approved\b",
-    r"\bcoverage is approved\b",
-    r"\bthe prior authorization is approved\b",
-    r"\bwe have approved\b",
-    r"\bdrug has been approved\b",
-    r"\bhas been approved\b",
-    r"\brequest has been reviewed and approved\b",
-    r"\bthe request is approved for the following time period\b",
-    r"\bwe've approved your ot your doctor's request for coverage for\b",
-    r"\bprior authorization status approved\b",
-    r"\band approved the request as follows\b",
-    r"\band approved tha request as follows\b",
-    r"\bre we ve approved your request for coverage\b",
-]
+# helper function to merge small boxes into a bigger
+def merge_boxes(boxes, overlap_thresh=30):
+    merged = []
+    while boxes:
+        base = boxes.pop(0)
+        bx, by, bw, bh = base
+        base_rect = [bx, by, bx + bw, by + bh]
+        to_merge = []
+        for i, (x, y, w, h) in enumerate(boxes):
+            rect = [x, y, x + w, y + h]
+            # Check if rectangles are overlapping or close (horizontal + vertical threshold)
+            if not (rect[2] < base_rect[0] - overlap_thresh or
+                    rect[0] > base_rect[2] + overlap_thresh or
+                    rect[3] < base_rect[1] - overlap_thresh or
+                    rect[1] > base_rect[3] + overlap_thresh):
+                to_merge.append(i)
+                base_rect = [
+                    min(base_rect[0], rect[0]),
+                    min(base_rect[1], rect[1]),
+                    max(base_rect[2], rect[2]),
+                    max(base_rect[3], rect[3])
+                ]
+        # Remove merged boxes from list
+        for index in sorted(to_merge, reverse=True):
+            boxes.pop(index)
+        # Append merged box
+        merged.append((
+            base_rect[0],
+            base_rect[1],
+            base_rect[2] - base_rect[0],
+            base_rect[3] - base_rect[1]
+        ))
+    return merged
 
-request_patterns = [
-    r"\brequest for approval\b",
-    r"\bpending approval\b",
-    r"\bsubmit for approval\b",
-    r"\bsubmit the prior authorization\b",
-    r"\bcomplete a pa for approval\b",
-    r"\bcomplete the pa\b",
-    r"\bcomplete a pa\b",
-    r"\bhas been rejected and requires prior authorization\b",
-    r"\brequires additional action to complete\b",
-    r"\bhas been started for you for\b",
-    r"\bhas pharmacy been rejected and requires prior authorization\b",
-    r"\ba prior authorization pa form has benn started for you for\b",
-    r"\bwe have automatically started this electronic prior authorization epa based on the expiration date of an existing prior authorization for the below patient and drug if your patient requires continued therapy you may follow the instructions below to submit the renewal epa online to request renewal of the current prior authorization\b",
-]
+def delete_images(images_path):
+    for filename in os.listdir(images_path):
+            file_path = os.path.join(images_path, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
 
-denial_patterns = [
-    r"\byour request has been denied\b",
-    r"\byour request was denied for the following reason\b",
-    r"\bthe prior authorization is denied\b",
-    r"\bwe have denied\b",
-    r"\bwe have rejected\b",
-    r"\bnot covered\b",
-    r"\bx denying your request for\b",
-    r"\bwe are not approving this medication because\b",
-    r"\bthis is the reason for the denial\b",
-]
+def analyze_and_extract(file_path, poppler_path, file, pytesseract_path) -> dict:
 
-# dob_patter = [
-#     r"\bdob\b[:\s-]*([0-9]{1,2}{/\-}[0-9]{1,2}{/\-}[0-9]{4})",
-#     r"\bdob:\b[:\s-]*([0-9]{1,2}{/\-}[0-9]{1,2}{/\-}[0-9]{4})",
-#     r"\date of birth\b[:\s-]*([0-9]{1,2}{/\-}[0-9]{1,2}{/\-}[0-9]{4})",
-#     r"\date of birth:\b[:\s-]*([0-9]{1,2}{/\-}[0-9]{1,2}{/\-}[0-9]{4})",
-# ]
+    pytesseract.pytesseract.tesseract_cmd = pytesseract_path
+    pages = convert_from_path(file_path, poppler_path=poppler_path, dpi=300) 
 
-# name_patterns = [
-#     r"dear\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'dear'
-#     r"patient(?:\s*name)?\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'patient'
-#     r"last\s*name\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'last name'
-#     r"member\s*name\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'last name'
-#     r"member\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'last name'
-#     r"name\s*[:, ]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})", # regex for names after 'last name'
-# ]
+    images_path = os.path.join(os.getcwd(), 'images')
+    result = []
 
-def determine_letter_type(text: str):
-    """
-    Determine if the extracted text is from an approval or denial letter
+    if not os.path.exists(images_path):
+        os.mkdir(images_path)
 
-    The function checks for the keywords such as 'approval' or 'approved'
-    and 'denial' or 'denied'. If none are found, it return 'unknown'
+    # iterate over tha pages sava the page as image
+    for i, page in enumerate(pages):
+        page.save(f'{images_path}/page_{i}.jpg', 'JPEG')
 
-    Args:
-        text (str): the full text extracted from the pdf
+        # read an image with cv2
+        image = cv2.imread(f'{images_path}/page_{i}.jpg')
 
-    Return:
-        str: 'approval', 'denial' or 'unknown'
-    """
+        # gray the image
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    text_lower = text.lower() # all text to lowercase
+        # blur an image
+        blur = cv2.GaussianBlur(gray, (7,7), 0)
 
-    # check for approval patterns
-    for pattern in approval_patterns:
-        if re.search(pattern, text_lower):
-            return "approval"
+        # threshold image
+        adaptive_tresh_rev = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 51, 5)
+        adaptive_tresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 23, 5)
         
-    # check for the pa request
-    for pattern in request_patterns:
-        if re.search(pattern, text_lower):
-            return "request"
+        # create an individual kernals
+        kernal = cv2.getStructuringElement(cv2.MORPH_RECT, (3,80))
+
+        # dilate image
+        dilate = cv2.dilate(adaptive_tresh_rev, kernal, iterations=1)
+        # cv2.imwrite(f'{images_path}/page_dilate_{i}.jpg', dilate)
+
+        # create contours
+        cnts = cv2.findContours(dilate, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+        boxes = [cv2.boundingRect(c) for c in cnts]
+        boxes = sorted(boxes, key=lambda x: x[0])
+        merged_boxes = merge_boxes(boxes)
+
+
+        for x, y, w, h in merged_boxes:
+            if h > 200 and w > 200:
+                roi = adaptive_tresh[y:y+h, x:x+w]
+                # cv2.rectangle color parameter is BGR
+                cv2.rectangle(image, (x, y), (x + w, y + h), (36, 255, 12), 1)
+                ocr_result = pytesseract.image_to_string(roi)
+                ocr_result = ocr_result.replace("\n", " ")
+                # print(ocr_result)
+                result.append(ocr_result) if ocr_result not in result else None
+
+        # cv2.imwrite(f'{images_path}/page_boxes_{i}.jpg', image)
+
+    letter_type = None
+    insurance = None
+
+
+    # print(" ".join(result))
+
+    try:
+        delete_images(images_path=images_path)
+    except Exception as e:
+        print(f"Error deleting file - {e}")
             
-    # check for denial patterns
-    for pattern in denial_patterns:
-        if re.search(pattern, text_lower):
-            return "denial"
-        
-    # default 'unknown'
-    return "unknown"
+    for entity in result:
+        letter_type = determine_letter_type(entity)
+        if letter_type:
+            break
+        else:
+            letter_type = "Other"
 
-def extract_patient(text: str):
-    """
-    Extract patient name, dob, and medication details from the text
+    for entity in result:
+        insurance = determine_insurance(entity)
+        if insurance:
+            break
 
-    Uses regex to extract info assuming:
-        Patient Name: name of the patient
-        DOB: patient dob
-        medication: medication name
-
-    (?) For medication: maybe better also to have a list and run it through text to find if matches
-    
-    Args:
-        text (str): the extracted text from the pdf
-    
-    Returns:
-        dict: A dictionary with keys 'name', 'dob', and 'medication'
-    """
-
-    # TODO: analyze results to adjust regex 
-    name_match = re.search(r'(Dear | Member)\s+([A-Z]+)\s+([A-Z]+)', text)
-    # name = "Unknown"
-    # for pattern in name_patterns:
-    #     match = re.search(pattern, text, re.IGNORECASE)
-    #     if match:
-    #         name = match.group(1).strip()
-    #         break
-    dob_match = re.search(r'\bDOB\b\s*:\s*([\d\/\-\.\s]+)', text, re.IGNORECASE)
-    # dob_match = next((re.search(pattern, text, re.IGNORECASE) for pattern in dob_patter if re.search(pattern, text, re.IGNORECASE)), None)
-    # if dob_match:
-    #     print(dob_match.group(1))
-    medication_match = re.search(r'\bMedication\b\s*:\s*(.+)', text, re.IGNORECASE)
-    
-    info = {
-        "name": name_match.group(1).strip() if name_match else "Unknown",
-        # "name": name,
-        "dob": dob_match.group(1).strip().replace('/', '-') if dob_match else "Unknown",
-        "medication": medication_match.group(1).strip() if medication_match else "Unknown"
+    file_result = {
+        "file_name": file,
+        "letter_type": letter_type,
+        "insurance": insurance,
+        "ocr_text": result,
+        "extracted_entities": None
     }
-    
-    return info
 
-def rename_and_move_pdf(pdf_path: str, letter_type: str, patient_info: dict, base_path: str, id, date: str) -> str:
-    """
-    Renames the pdf based on letter type, patient name, dob, and medication
-    Then moves it to the appropriate folder ('approvals', 'denials', or 'unknown')
-    """
+    if letter_type != "Other" and insurance:
+        print(f"Letter type: {letter_type}\nInsurance: {insurance}")
+        match letter_type:
+            case "Approval":
+                file_result["extracted_entities"] = find_approval_entities(text=" ".join(result), insurance=insurance)
+            case "Denial":
+                file_result["extracted_entities"] =find_denial_entitied(text=" ".join(result), insurance=insurance)
 
-    # Helper to sanitize filenames
-    def clean_str(s):
-        return re.sub(r'\W+', '-', s).strip('-')
-
-    # Clean up patient info for filename
-    cleaned_name = clean_str(patient_info.get("name", "Unknown"))
-    cleaned_dob = clean_str(patient_info.get("dob", "Unknown"))
-    cleaned_med = clean_str(patient_info.get("medication", "Unknown"))
-
-    # Decide on folder
-    if letter_type == "approval":
-        folder = os.path.join(base_path, "approvals")
-    elif letter_type == "denial":
-        folder = os.path.join(base_path, "denials")
-    elif letter_type == "request":
-        folder = os.path.join(base_path, "request-pa")
-    # else:
-    #     folder = os.path.join(base_path, "other")
-    else:
-        folder = os.path.join("S:\\Folders\\FAXES", date)
-
-    # Make sure folder exists
-    os.makedirs(folder, exist_ok=True)
-
-    # Create new filename
-    if (letter_type == "approval" or letter_type == "denial" or letter_type == "request"):
-        new_filename = f"{letter_type.capitalize()}_{cleaned_name}_{cleaned_dob}_{cleaned_med}_{id}.pdf"
-        new_pdf_path = os.path.join(folder, new_filename)
-    else:
-        new_filename = f"FaxID_{id}.pdf"
-        new_pdf_path = os.path.join(folder, new_filename)
-
-    # if (letter_type != "other"):
-    #     new_filename = f"FaxID_{id}.pdf"
-    #     # new_filename = f"{id}.pdf"
-    #     new_pdf_path = os.path.join(folder, new_filename)
-    # else:
-    #     new_filename = f"FaxID_{id}.pdf"
-    #     new_pdf_path = os.path.join(folder, new_filename)
-
-    # Move/rename the file
-    shutil.move(pdf_path, new_pdf_path)
-
-    return new_pdf_path
+    return file_result
