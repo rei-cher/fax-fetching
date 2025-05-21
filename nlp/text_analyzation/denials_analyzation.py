@@ -74,4 +74,5 @@ def find_denial_entitied(text, insurance):
             if patient_drug_match:
                 patient_drug = patient_drug_match.group(1).split(" ")[0]
 
+    # print(f"[Approval analyzator] Patient info\nName: {patient_name}\nDOB: {patient_dob}\nDrug: {patient_drug}")
     return sanitize_filename(patient_name), sanitize_filename(patient_dob), sanitize_filename(patient_drug)

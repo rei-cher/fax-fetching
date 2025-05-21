@@ -74,21 +74,25 @@ def main(date=None):
                 pdf_file.write(pdf_response.content)
 
             if os.path.exists(temp_pdf_path):
-                all_results.append(copy_and_rename_pdf(
+                result = copy_and_rename_pdf(
                     src_path=temp_pdf_path, 
                     poppler_path=os.getenv("POPPLER_LOCATION"), 
                     file_name=fax_id, 
                     dest_root=date_location, 
                     pytesseract_path=os.getenv("TESSERACT_CMD"),
                     date=date
-                ))
+                )
 
             count += 1
 
-        with open("extract_results.json", "w") as file:
-            json.dump(all_results, file, indent=4)
+        # ==== Uncomment to get the whole json log ====
+        
+            # all_results.append(result)
+
+        # with open("extract_results.json", "w") as file:
+        #     json.dump(all_results, file, indent=4)
             
-        print(f"Total: {count}\nPassed: {count-failed}\nFailed: {failed}")
+        print(f"Total processed: {count}\nPassed: {count-failed}\nFailed: {failed}")
 
 # ========== Calling the main function ============
 # ========== VERSION 0.2.1 ===========

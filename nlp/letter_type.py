@@ -38,6 +38,7 @@ denial_patterns = [
     r"X_Denying your request for",
     r"x_ Denying your request for",
     r"x_Denying your request for",
+    r"X__ Denying your request for",
     r"RE: Denial of request for coverage",
     r"denied the request for the following reason",
     r"We are unable to approve your request for this drug",

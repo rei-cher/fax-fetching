@@ -1,9 +1,11 @@
-import cv2, pytesseract, os
+import cv2, pytesseract, os, json
 from pdf2image import convert_from_path
 from .text_analyzation.approvals_analyzation import find_approval_entities
 from .text_analyzation.denials_analyzation import find_denial_entitied
 from .letter_type import determine_letter_type
 from .insurance_type import determine_insurance
+
+results = []
 
 # helper function to merge small boxes into a bigger
 def merge_boxes(boxes, overlap_thresh=30):
@@ -132,7 +134,14 @@ def analyze_and_extract(file_path, poppler_path, file, pytesseract_path) -> dict
     }
 
     if letter_type != "Other" and insurance:
-        print(f"Letter type: {letter_type}\nInsurance: {insurance}")
+        # print(f"Letter type: {letter_type}\nInsurance: {insurance}")
+
+        # ==== Uncomment to get the json logs for the approval and denials faxes ====
+        # results.append(file_result)
+
+        # with open("approvals_denials_results.json", "w") as file:
+        #     json.dump(results, file, indent=4)
+
         match letter_type:
             case "Approval":
                 file_result["extracted_entities"] = find_approval_entities(text=" ".join(result), insurance=insurance)

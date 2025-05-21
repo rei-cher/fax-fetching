@@ -11,6 +11,8 @@ def find_approval_entities(text, insurance):
     patient_dob = None
     patient_drug = None
 
+    # print(f"[Find approval called] Insurance: {insurance}")
+
     match insurance:
         case "Healthfirst":
             patient_name_match = re.search(r'Member Name:\s*(.*?)\s+Member\b', text) or re.search(r'Dear ([A-Z ]+):', text)
@@ -41,7 +43,7 @@ def find_approval_entities(text, insurance):
                 patient_drug = patient_drug_match.group(1)
         
         case "Horizon":
-            pattern = re.search(r'(?:has|hag) (?:requested|requosted)\s+([A-Za-z\-]+?)\s+for\s+([A-Z\s]+?),\s*(?:ID|1D|LD|\[D)\s*#\s*\d+,\s*DOB\s*(\d{1,2}/\d{1,2}/\d{4})', text, re.DOTALL)
+            pattern = re.search(r'(?:has|hag)\s+(?:requested|requosted)\s+([\w\s\-]+?)\s+for\s+([A-Z\s]+?),\s*(?:ID|1D|LD|\[D)\s*#\s*\d+,\s*DOB\s*(\d{1,2}/\d{1,2}/\d{4})', text)
             if pattern:
                 patient_name = pattern.group(2).replace('\n', ' ').strip().replace(" ", "-")
                 patient_dob = pattern.group(3).strip().replace("/", "-")
@@ -136,7 +138,8 @@ def find_approval_entities(text, insurance):
             if patient_drug_match:
                 patient_drug = patient_drug_match.group(1)
 
-    if "-" in patient_drug:
-        patient_drug = patient_drug.replace("-", " ")
+    # if "-" in patient_drug:
+    #     patient_drug = patient_drug.replace("-", " ")
 
-    return patient_name, patient_dob, patient_drug[0]
+    # print(f"[Approval analyzator] Patient info\nName: {patient_name}\nDOB: {patient_dob}\nDrug: {patient_drug}")
+    return sanitize_filename(patient_name), sanitize_filename(patient_dob), sanitize_filename(patient_drug)

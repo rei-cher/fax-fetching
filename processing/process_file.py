@@ -45,7 +45,8 @@ def copy_and_rename_pdf(
             name = (ent[0] or "Unknown").replace(" ", "-")
             dob  = (ent[1] or "Unknown").replace(" ", "-")
             drug = (ent[2] or "Unknown").replace(" ", "-")
-    
+
+        # print(f"[Process file] Patient info\nName: {name}\nDOB: {dob}\nDrug: {drug}")
         # build destination directory and filename
         dest_dir = os.path.join(dest_root, lt)
         os.makedirs(dest_dir, exist_ok=True)
@@ -59,5 +60,6 @@ def copy_and_rename_pdf(
     
     # copy
     shutil.move(src_path, dest_path)
+    # os.remove(src_path)
 
     return file_result
