@@ -1,10 +1,8 @@
-from datetime import datetime, timedelta
-from dumpers.json_dumper import dump_json
-from login.login import get_token
-from login.get_faxes import get_last_faxes
+from datetime import datetime
 from dotenv import load_dotenv
-from processing.process_file import copy_and_rename_pdf
-from dumpers.pdf_dumper import download_pdf
+from login import get_token, get_last_faxes
+from processing import copy_and_rename_pdf
+from dumpers import download_pdf
 import time, os, json, threading
 
 # ========== Globla load env =============
