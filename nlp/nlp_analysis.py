@@ -1,7 +1,6 @@
 import cv2, pytesseract, os, json
 from pdf2image import convert_from_path
-from .text_analyzation.approvals_analyzation import find_approval_entities
-from .text_analyzation.denials_analyzation import find_denial_entitied
+from .text_analyzation import find_approval_entities, find_denial_entitied
 from .letter_type import determine_letter_type
 from .insurance_type import determine_insurance
 
