@@ -1,4 +1,4 @@
-from sanitizer import sanitize_filename
+from .sanitizer import sanitize_filename
 
 __all__ = [
     "sanitize_filename"

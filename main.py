@@ -19,7 +19,7 @@ def main(interval: int):
         date = datetime.now().strftime("%m-%d-%Y")
         # Getting token and validating it
         response_last_faxes = get_last_faxes(token=token)
-        if not token or response_last_faxes.status_code == 403 or response_last_faxes.status_code == 401:
+        if not token or not response_last_faxes or response_last_faxes.status_code in [401,403]:
             try:
                 token = get_token(
                         username=os.getenv("USERNAME_ENV"),
