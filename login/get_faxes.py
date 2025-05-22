@@ -11,10 +11,11 @@ def get_last_faxes(token: str):
 
     try:
         response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response
+        else:
+            print(f"Error while trying to get last faxes. Status code: {response.status_code}")
+            return None
     except Exception as e:
         print(f"Error while requesting the token: {e}")
-
-    if response.status_code == 200:
-        return response
-    else:
-        print(f"Error while tried to get last faxes. Status code: {response.status_code}")
+        return None
