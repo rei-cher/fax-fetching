@@ -1,5 +1,5 @@
 import shutil, os, json
-from nlp.nlp_analysis import analyze_and_extract
+from nlp import analyze_and_extract
 
 # file_name is fax_id
 def copy_and_rename_pdf(
