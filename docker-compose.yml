@@ -1,0 +1,14 @@
+services:
+    fax-fetching:
+        build: .
+        env_file:
+            - .env
+        voluimes:
+            - /mnt/S:/app/dumps # TODO: change to the correct for the sharable folder
+        restart: unless-stopped
+        networks:
+            - dkhasak
+
+networks:
+    dkhasak:
+        driver: bridge
