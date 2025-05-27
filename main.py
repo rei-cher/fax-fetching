@@ -112,7 +112,7 @@ def main(interval: int):
         time.sleep(interval)
 
 # ========== Calling the main function ============
-# ========== VERSION 0.3.1 ===========
+# ========== VERSION 0.3.2 ===========
 if __name__ == "__main__":
     listener_thread = threading.Thread(target=main(interval=10))
     listener_thread.daemon = True
