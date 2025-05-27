@@ -32,7 +32,7 @@ def copy_and_rename_pdf(
     # name as fax_{fax_id}.pdf
 
     if lt == "Other":
-        dest_dir = os.path.join("S:\\Folders\\FAXES", f"{date}")
+        dest_dir = os.path.join(dest_root,lt)
         os.makedirs(dest_dir, exist_ok=True)
         file_name = f"fax_{file_name}.pdf"
         dest_path = os.path.join(dest_dir, file_name)

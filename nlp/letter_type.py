@@ -21,6 +21,7 @@ approval_patterns = [
     r"has approved a request from you or your doctor for"
     r"We approved coverage under the member's prescription drug benefits for"
     r"Prior authorization is not required at this time"
+    r"PRESCRIPTION DRUG APPROVAL"
 ]
  
 denial_patterns = [
@@ -44,6 +45,8 @@ denial_patterns = [
     r"We are unable to approve your request for this drug",
     r"denied the prior authorization",
     r"After reviewing the information sent with your request, it was determined that this request does not meet the criteria for medical necessity",
+    r"Notice of Final Adverse Determination",
+    r"After careful consideration and review of the information sent to us, this request was not approved.",
 
 ]
 
@@ -59,6 +62,7 @@ request_patterns = [
     r'RESPONSE REQUESTED:  Please send a new prescription',
     r'PRIOR AUTHORIZATION REQUEST',
     r'Your request for prior authorization has been denied. Complete and fax this appeal to the plan today so your patient can receive their medication'
+    r'preferred way to receive prior authorization requests, and the fastest way to receive a determination'
 ]
 
 received_request_patterns = [
@@ -71,7 +75,7 @@ trash_pattern = [
 
 # TODO: find and determine patterns for clinical requests without breaking the other determinations
 clinical_pattern = [
-    
+    r'Please provide the additional information requested on the following page',
 ]
 
 def determine_letter_type(text) -> str:
@@ -96,4 +100,4 @@ def determine_letter_type(text) -> str:
             return "Trash"
     # for pattern in clinical_pattern:
     #     if re.search(pattern, text):
-    #         return "Clinical"
+    #         return "Additional-Clinical"

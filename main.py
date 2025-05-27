@@ -30,7 +30,23 @@ def main(interval: int):
             if token:
                 response_last_faxes = get_last_faxes(token=token)
 
-        data = response_last_faxes.json()
+        # Check if response is still None or has server error
+        if not response_last_faxes:
+            print("Error: Failed to fetch last faxes. Response is None.")
+            time.sleep(interval)
+            continue
+
+        if response_last_faxes.status_code == 502:
+            print("Error 502: Bad Gateway when trying to download the last fax.")
+            time.sleep(interval)
+            continue
+
+        try:
+            data = response_last_faxes.json()
+        except Exception as e:
+            print(f"Failed to parse JSON from response: {e}")
+            time.sleep(interval)
+            continue
 
         fax_list = data.get("faxes", [])
 
