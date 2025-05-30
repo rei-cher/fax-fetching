@@ -125,7 +125,15 @@ def find_approval_entities(text, insurance):
                 patient_drug = patient_drug_match.group(1).split(" ")[0]
 
         case "Aetna":
-            pass
+            patient_name_match = re.search(r'Member Name:\s*(.*?)\s*Member\b', text)
+            patient_dob_match = re.search(r'date of birth:\s*(\d{2}/\d{2}/\d{4})', text)
+            patient_drug_match = re.search(r'for coverage of\s*(.+?).\s+Decision', text)
+            if patient_name_match:
+                patient_name = patient_name_match.group(1).strip().replace(" ", "-")
+            if patient_dob_match:
+                patient_dob = patient_dob_match.group(1).replace("/", "-")
+            if patient_drug_match:
+                patient_drug = patient_drug_match.group(1)
 
         case "Anthem":
             patient_name_match = re.search(r'Member Name:\s*(.*?)\s*Member\b', text)
