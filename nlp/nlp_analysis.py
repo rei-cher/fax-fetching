@@ -1,6 +1,6 @@
 import cv2, pytesseract, os, json
 from pdf2image import convert_from_path
-from .text_analyzation import find_approval_entities, find_denial_entitied
+from .text_analyzation import find_approval_entities, find_denial_entities, find_request_entities
 from .letter_type import determine_letter_type
 from .insurance_type import determine_insurance
 
@@ -145,6 +145,8 @@ def analyze_and_extract(file_path, poppler_path, file, pytesseract_path) -> dict
             case "Approval":
                 file_result["extracted_entities"] = find_approval_entities(text=" ".join(result), insurance=insurance)
             case "Denial":
-                file_result["extracted_entities"] =find_denial_entitied(text=" ".join(result), insurance=insurance)
+                file_result["extracted_entities"] = find_denial_entities(text=" ".join(result), insurance=insurance)
+            case "PA-Request":
+                file_result["extracted_entities"] = find_request_entities(text=" ".join(result))
 
     return file_result
