@@ -146,7 +146,7 @@ def analyze_and_extract(file_path, poppler_path, file, pytesseract_path) -> dict
                 file_result["extracted_entities"] = find_approval_entities(text=" ".join(result), insurance=insurance)
             case "Denial":
                 file_result["extracted_entities"] = find_denial_entities(text=" ".join(result), insurance=insurance)
-            case "PA-Request":
-                file_result["extracted_entities"] = find_request_entities(text=" ".join(result))
+            # case "PA-Request":
+            #     file_result["extracted_entities"] = find_request_entities(text=" ".join(result))
 
     return file_result

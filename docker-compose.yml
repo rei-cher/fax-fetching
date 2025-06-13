@@ -1,0 +1,14 @@
+services:
+  faxes:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: faxes
+    restart: unless-stopped
+    command: ["python", "main.py"]
+    environment:
+      TESSERACT_CMD: "/usr/bin/tesseract"
+      POPPLER_LOCATION: "/usr/bin"
+      DUMP_LOCATION: "/data/faxes"
+    volumes:
+      - "S:/Folders/FAXES:/data/faxes"
