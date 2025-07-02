@@ -34,6 +34,7 @@ def main(interval: int):
     token = None
     current_fax_id = load_last_fax_id()  # Load last fax ID on startup
     new_faxes_set = set()
+    last_id = None
 
     while True:
         date = datetime.now().strftime("%m-%d-%Y")
@@ -48,7 +49,9 @@ def main(interval: int):
             except Exception as e:
                 print(f"Error getting token: {e}")
             if token:
+                print("Token received, getting last faxes")
                 response_last_faxes = get_last_faxes(token=token)
+                print("Received faxes from get_last_faxes: ", response_last_faxes)
 
         # Check if response is still None or has server error
         if not response_last_faxes:
@@ -62,13 +65,15 @@ def main(interval: int):
             continue
 
         try:
+            print("Saving received faxes into 'data'")
             data = response_last_faxes.json()
+            print("Faxes saved sucessfully")
         except Exception as e:
             print(f"Failed to parse JSON from response: {e}")
             time.sleep(interval)
             continue
 
-        fax_list = data.get("faxes", [])
+        fax_list = data.get("rows", [])
 
         # Add new fax IDs to the set until reaching current_fax_id
         new_faxes_added = False
