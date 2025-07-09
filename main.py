@@ -122,7 +122,14 @@ def main(interval: int):
                 print(f"Failed to download {fax_id}: {e}")
                 continue
 
+            
             temp_pdf_path = os.path.join(date_location, f"pdf-{fax_id}.pdf")
+
+            # debug logs
+            print(f"Checking path: {temp_pdf_path}")
+            print(f"Exists: {os.path.exists(temp_pdf_path)}")
+            print(f"Writable: {os.access(os.path.dirname(temp_pdf_path), os.W_OK)}")
+            
             with open(temp_pdf_path, 'wb') as pdf_file:
                 pdf_file.write(pdf_response.content)
 
