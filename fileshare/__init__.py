@@ -1,6 +1,7 @@
-from .fileshare_management import create_folder, upload_file
-
+from .fileshare_management import ensure_folder, upload_file, authenticate, get_today_folder
 __all__ = [
-    "create_folder",
-    "upload_file"
+    "ensure_folder",
+    "upload_file",
+    "authenticate",
+    "get_today_folder"
 ]

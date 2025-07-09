@@ -10,5 +10,8 @@ services:
       TESSERACT_CMD: "/usr/bin/tesseract"
       POPPLER_LOCATION: "/usr/bin"
       DUMP_LOCATION: "/data/faxes"
-    volumes:
-      - "S:/Folders/FAXES:/data/faxes"
+      HOSTNAME: "dmitrykhasak.sharefile.com"
+      USERNAME: "dk1@dkdermgroup.com"
+      PASSWORD: "DrKhasak2025!"
+      CLIENT_ID: "pF4cbpOFj7wTmvbnmLqPM3Jmi6VY0tHU"
+      CLIENT_SECTRET: "vTWymgKTgp7hU0XzfYz5OQihPMRaD34Mf08jYBIGlkZOCdHS"
