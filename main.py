@@ -5,30 +5,53 @@ from processing import copy_and_rename_pdf
 from dumpers import download_pdf
 import time, os, json, threading
 
-# ========== Globla load env =============
-# will be used to pass env variables as a parameters into functions
+# ========== Global load env =============
+# will be used to pass env variables as parameters into functions
 load_dotenv()
+
+def save_last_fax_id(fax_id, file_path="last_fax_id.json"):
+    """Save the last fetched fax ID to a JSON file."""
+    try:
+        with open(file_path, 'w') as f:
+            json.dump({"last_fax_id": fax_id}, f)
+    except Exception as e:
+        print(f"Error saving last fax ID: {e}")
+
+def load_last_fax_id(file_path="last_fax_id.json"):
+    """Load the last fetched fax ID from a JSON file."""
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+                return data.get("last_fax_id")
+        return None
+    except Exception as e:
+        print(f"Error loading last fax ID: {e}")
+        return None
 
 def main(interval: int):
     # Local variables
     token = None
-    current_fax_id = None
+    current_fax_id = load_last_fax_id()  # Load last fax ID on startup
     new_faxes_set = set()
+    last_id = None
 
     while True:
         date = datetime.now().strftime("%m-%d-%Y")
         # Getting token and validating it
         response_last_faxes = get_last_faxes(token=token)
-        if not token or not response_last_faxes or response_last_faxes.status_code in [401,403]:
+        if not token or not response_last_faxes or response_last_faxes.status_code in [401, 403]:
             try:
                 token = get_token(
-                        username=os.getenv("USERNAME_ENV"),
-                        password=os.getenv("PASSWORD_ENV")
-                    )
+                    username=os.getenv("USERNAME_ENV"),
+                    password=os.getenv("PASSWORD_ENV")
+                )
             except Exception as e:
                 print(f"Error getting token: {e}")
             if token:
+                print("Token received, getting last faxes")
                 response_last_faxes = get_last_faxes(token=token)
+                print("Received faxes from get_last_faxes: ", response_last_faxes)
 
         # Check if response is still None or has server error
         if not response_last_faxes:
@@ -42,13 +65,15 @@ def main(interval: int):
             continue
 
         try:
+            print("Saving received faxes into 'data'")
             data = response_last_faxes.json()
+            print("Faxes saved sucessfully")
         except Exception as e:
             print(f"Failed to parse JSON from response: {e}")
             time.sleep(interval)
             continue
 
-        fax_list = data.get("faxes", [])
+        fax_list = data.get("rows", [])
 
         # Add new fax IDs to the set until reaching current_fax_id
         new_faxes_added = False
@@ -67,25 +92,26 @@ def main(interval: int):
             top_fax_id = fax_list[0].get("id")
             if top_fax_id:
                 current_fax_id = top_fax_id
+                save_last_fax_id(current_fax_id)  # Save the latest fax ID
                 print(f"Updated current_fax_id to {current_fax_id}")
 
-        # make folder for the dedicated date
-        date_location = f"{os.getenv("DUMP_LOCATION")}\\{date}"
-        if(not os.path.exists(date_location)):
+        # Make folder for the dedicated date
+        date_location = f"{os.getenv('DUMP_LOCATION')}\\{date}"
+        if not os.path.exists(date_location):
             os.mkdir(date_location)
 
-        # download faxes in the set
+        # Download faxes in the set
         for fax_id in list(new_faxes_set):
             pdf_url = f"{os.getenv('URL_REQUEST')}/{fax_id}"
 
             try:
                 pdf_response = download_pdf(
-                    pdf_url = pdf_url, 
-                    token = token, 
-                    location = os.getenv("LOCATION_ID")
+                    pdf_url=pdf_url, 
+                    token=token, 
+                    location=os.getenv("LOCATION_ID")
                 )
         
-                if (pdf_response.status_code !=200):
+                if pdf_response.status_code != 200:
                     print(f"Error with {fax_id}, status code: {pdf_response.status_code}")
                     new_faxes_set.remove(fax_id)
                     continue
@@ -94,8 +120,16 @@ def main(interval: int):
                 print(f"Downloaded and analyzed {fax_id}")
             except Exception as e:
                 print(f"Failed to download {fax_id}: {e}")
+                continue
 
+            
             temp_pdf_path = os.path.join(date_location, f"pdf-{fax_id}.pdf")
+
+            # debug logs
+            print(f"Checking path: {temp_pdf_path}")
+            print(f"Exists: {os.path.exists(temp_pdf_path)}")
+            print(f"Writable: {os.access(os.path.dirname(temp_pdf_path), os.W_OK)}")
+            
             with open(temp_pdf_path, 'wb') as pdf_file:
                 pdf_file.write(pdf_response.content)
 
@@ -114,7 +148,7 @@ def main(interval: int):
 # ========== Calling the main function ============
 # ========== VERSION 0.3.2 ===========
 if __name__ == "__main__":
-    listener_thread = threading.Thread(target=main(interval=10))
+    listener_thread = threading.Thread(target=main, args=(10,))
     listener_thread.daemon = True
     listener_thread.start()
 

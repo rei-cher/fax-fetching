@@ -1,6 +1,7 @@
 import cv2, pytesseract, os, json
 from pdf2image import convert_from_path
-from .text_analyzation import find_approval_entities, find_denial_entitied
+from pdf2image.exceptions import PDFPageCountError
+from .text_analyzation import find_approval_entities, find_denial_entities, find_request_entities
 from .letter_type import determine_letter_type
 from .insurance_type import determine_insurance
 
@@ -49,7 +50,14 @@ def delete_images(images_path):
 def analyze_and_extract(file_path, poppler_path, file, pytesseract_path) -> dict:
 
     pytesseract.pytesseract.tesseract_cmd = pytesseract_path
-    pages = convert_from_path(file_path, poppler_path=poppler_path, dpi=300) 
+    try:
+        pages = convert_from_path(file_path, poppler_path=poppler_path, dpi=300) 
+    except PDFPageCountError as e:
+        print(f"Failed to process PDF: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error while processing {file_path}: {e}")
+        return None
 
     images_path = os.path.join(os.getcwd(), 'images')
     result = []
@@ -145,6 +153,8 @@ def analyze_and_extract(file_path, poppler_path, file, pytesseract_path) -> dict
             case "Approval":
                 file_result["extracted_entities"] = find_approval_entities(text=" ".join(result), insurance=insurance)
             case "Denial":
-                file_result["extracted_entities"] =find_denial_entitied(text=" ".join(result), insurance=insurance)
+                file_result["extracted_entities"] = find_denial_entities(text=" ".join(result), insurance=insurance)
+            # case "PA-Request":
+            #     file_result["extracted_entities"] = find_request_entities(text=" ".join(result))
 
     return file_result

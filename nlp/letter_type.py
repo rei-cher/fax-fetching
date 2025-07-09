@@ -21,7 +21,8 @@ approval_patterns = [
     r"has approved a request from you or your doctor for"
     r"We approved coverage under the member's prescription drug benefits for"
     r"Prior authorization is not required at this time"
-    r"PRESCRIPTION DRUG APPROVAL"
+    r"PRESCRIPTION DRUG APPROVAL",
+    r"we have approved your request for coverage"
 ]
  
 denial_patterns = [
@@ -47,6 +48,7 @@ denial_patterns = [
     r"After reviewing the information sent with your request, it was determined that this request does not meet the criteria for medical necessity",
     r"Notice of Final Adverse Determination",
     r"After careful consideration and review of the information sent to us, this request was not approved.",
+    r"DENIAL DRUG UTILIZATION REVIEW FORM"
 
 ]
 

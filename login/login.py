@@ -22,6 +22,7 @@ def get_token(username: str, password: str):
         print(f"Error while requesting the token: {e}")
 
     if response.status_code == 200:
+        print("Token obtained sucessfully")
         return response.json().get('token')
     else:
         print(f"Error while tried to get token. Status code: {response.status_code}")

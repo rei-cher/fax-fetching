@@ -1,6 +1,6 @@
 import requests
 
-def get_last_faxes(token: str):
+def get_last_faxes(token: str, last_id: str = None):
     url = f"https://api.weaveconnect.com/fax/v1/faxes?locationId=77f850f9-6d12-4278-8b93-8bc390422dfe&locationIds=77f850f9-6d12-4278-8b93-8bc390422dfe"
 
     headers = {
@@ -9,9 +9,14 @@ def get_last_faxes(token: str):
         "location-id": "77f850f9-6d12-4278-8b93-8bc390422dfe"
     }
 
+    if last_id:
+        headers["lastId"] = last_id
+
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
+            print("Faxes received sucessfully")
+            print("Sending faxes to main: ", response)
             return response
         else:
             print(f"Error while trying to get last faxes. Status code: {response.status_code}")

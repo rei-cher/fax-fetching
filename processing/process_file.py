@@ -60,6 +60,5 @@ def copy_and_rename_pdf(
     
     # copy
     shutil.move(src_path, dest_path)
-    # os.remove(src_path)
 
     return file_result

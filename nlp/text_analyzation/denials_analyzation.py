@@ -1,7 +1,7 @@
 import re
 from .helper.sanitizer import sanitize_filename
 
-def find_denial_entitied(text, insurance):
+def find_denial_entities(text, insurance):
     """
     Based on the extracted ocr text and insurnace type from determine_insurance, get the patient info.
     For each insurance there is its own regex for patient info.
