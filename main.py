@@ -38,17 +38,6 @@ def main(interval: int):
     current_fax_id = load_last_fax_id() or None
     new_faxes_set = set()
 
-    # Authenticate to ShareFile once
-    sf_token = sf_authenticate(
-        hostname = os.getenv("HOSTNAME"),
-        client_id = "pF4cbpOFj7wTmvbnmLqPM3Jmi6VY0tHU",
-        client_secret = "vTWymgKTgp7hU0XzfYz5OQihPMRaD34Mf08jYBIGlkZOCdHS",
-        username = os.getenv("USERNAME"),
-        password = os.getenv("PASSWORD"),
-    )
-    if not sf_token:
-        raise RuntimeError("Failed to authenticate to ShareFile")
-
     while True:
         date = datetime.now().strftime("%m-%d-%Y")
 
@@ -65,6 +54,17 @@ def main(interval: int):
             print("Error fetching faxes, status:", getattr(resp_faxes, "status_code", None))
             time.sleep(interval)
             continue
+
+        # Authenticate to ShareFile once
+        sf_token = sf_authenticate(
+            hostname = os.getenv("HOSTNAME"),
+            client_id = "pF4cbpOFj7wTmvbnmLqPM3Jmi6VY0tHU",
+            client_secret = "vTWymgKTgp7hU0XzfYz5OQihPMRaD34Mf08jYBIGlkZOCdHS",
+            username = os.getenv("USERNAME"),
+            password = os.getenv("PASSWORD"),
+        )
+        if not sf_token:
+            raise RuntimeError("Failed to authenticate to ShareFile")
 
         data = resp_faxes.json().get("rows", [])
         # collect new IDs
@@ -99,7 +99,7 @@ def main(interval: int):
                     continue
 
                 # write raw PDF locally
-                local_dir  = os.path.join(os.getenv("DUMP_LOCATION"), date)
+                local_dir  = os.path.join(os.getenv("LOCAL_DUMP"), date)
                 os.makedirs(local_dir, exist_ok=True)
                 raw_path   = os.path.join(local_dir, f"pdf-{fax_id}.pdf")
                 with open(raw_path, "wb") as f:
@@ -108,9 +108,9 @@ def main(interval: int):
                 # process & upload to ShareFile~~
                 copy_and_rename_pdf(
                     src_path = raw_path,
-                    poppler_path = "/opt/homebrew/Cellar/poppler/25.03.0/bin",
+                    poppler_path = os.getenv("POPPLER_LOCATION"),
                     file_name = fax_id,
-                    pytesseract_path = "/opt/homebrew/bin/tesseract",
+                    pytesseract_path = os.getenv("TESSERACT_CMD"),
                     date_folder_id = date_folder_id,
                     sf_token = sf_token
                 )
