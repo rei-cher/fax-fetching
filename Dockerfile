@@ -29,4 +29,4 @@ RUN pip install --upgrade pip setuptools wheel \
 # Copy application code
 COPY . .
 
-CMD ["python3", "main.py"]
+CMD ["python3", "-u", "main.py"]

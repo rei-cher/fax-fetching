@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: faxes
     restart: unless-stopped
-    command: ["python3", "main.py"]
+    command: ["python3", "-u", "main.py"]
     environment:
       TESSERACT_CMD: "/usr/bin/tesseract"
       POPPLER_LOCATION: "/usr/bin"
