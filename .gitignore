@@ -1,5 +1,6 @@
 header.txt
 .env
-.venv
+.venv*
 *.json
 debug/*
+processing_faxes/*

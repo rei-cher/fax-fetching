@@ -1,14 +1,32 @@
-FROM python:3.9-slim
+FROM python:3.12.9-slim
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        poppler-utils \
-        tesseract-ocr \
-    && rm -rf /var/lib/apt/lists/*
+# Upgrade pip and install system dependencies
+RUN pip install --upgrade pip \
+ && apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    build-essential \
+    libpq-dev \
+    gcc \
+    tesseract-ocr \
+    poppler-utils \
+    libc6-dev \
+    libblas-dev \
+    liblapack-dev \
+    gfortran \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . /app
 
-CMD ["python", "main.py"]
+# Install Python dependencies
+COPY requirements.txt ./
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install --prefer-binary blis \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir python-dotenv \
+    && pip install --no-cache-dir spacy
+
+
+# Copy application code
+COPY . .
+
+CMD ["python3", "main.py"]

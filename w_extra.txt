@@ -1,0 +1,5 @@
+
+
+TESSERACT_CMD=C:\Users\OFFICE\AppData\Local\Programs\Tesseract-OCR\tesseract.exe
+POPPLER_LOCATION=C:\Users\OFFICE\Documents\poppler-24.08.0\Library\bin
+DUMP_LOCATION=S:\Folders\FAXES

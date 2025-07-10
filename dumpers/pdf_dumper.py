@@ -18,6 +18,7 @@ def download_pdf(pdf_url, token, location):
         )
 
         return response
+        
     except requests.exceptions.ConnectionError:
         print(f"Download of {pdf_url.split("/")[-1]} failed due to exceed of requests\nWaiting 20 seconds, then retrying.")
         time.sleep(20)
