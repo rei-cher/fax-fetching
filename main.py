@@ -82,7 +82,7 @@ def main(interval: int):
 
         # ensure today’s ShareFile folder exists
         try:
-            date_folder_id = get_today_folder(sf_token, f'{date}_docker_test')
+            date_folder_id = get_today_folder(sf_token, f'{date}')
         except Exception as e:
             print("Error accessing/creating date folder:", e)
             time.sleep(interval)
