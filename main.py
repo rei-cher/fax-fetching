@@ -82,7 +82,7 @@ def main(interval: int):
 
         # ensure today’s ShareFile folder exists
         try:
-            date_folder_id = get_today_folder(sf_token, f'{date}')
+            date_folder_id = get_today_folder(sf_token, f'{date}_docker_test')
         except Exception as e:
             print("Error accessing/creating date folder:", e)
             time.sleep(interval)
@@ -99,7 +99,7 @@ def main(interval: int):
                     continue
 
                 # write raw PDF locally
-                local_dir  = os.path.join(os.getenv("LOCAL_DUMP"), date)
+                local_dir  = os.path.join(os.getenv("DUMP_LOCATION"), date)
                 os.makedirs(local_dir, exist_ok=True)
                 raw_path   = os.path.join(local_dir, f"pdf-{fax_id}.pdf")
                 with open(raw_path, "wb") as f:

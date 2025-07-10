@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: faxes
     restart: unless-stopped
-    command: ["python", "main.py"]
+    command: ["python3", "main.py"]
     environment:
       TESSERACT_CMD: "/usr/bin/tesseract"
       POPPLER_LOCATION: "/usr/bin"
@@ -15,3 +15,8 @@ services:
       PASSWORD: "DrKhasak2025!"
       CLIENT_ID: "pF4cbpOFj7wTmvbnmLqPM3Jmi6VY0tHU"
       CLIENT_SECTRET: "vTWymgKTgp7hU0XzfYz5OQihPMRaD34Mf08jYBIGlkZOCdHS"
+      USERNAME_ENV: "agent-14@dkdermgroup.com"
+      PASSWORD_ENV: "Weave2024"
+      URL_LOGIN: "https://app.getweave.com/"
+      URL_REQUEST: "https://api.weaveconnect.com/portal/v1/fax"
+      LOCATION_ID: "77f850f9-6d12-4278-8b93-8bc390422dfe"
